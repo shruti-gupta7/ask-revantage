@@ -200,7 +200,7 @@ The Admin Dashboard never uses Shruti Gupta's photo for the fictional admin pers
 
 Each route has dedicated metadata. The branded preview image is `public/og/ask-revantage.png` and is also exposed through `app/opengraph-image.png`.
 
-The canonical pages live under `app/(workspace)` so the shared application shell persists across navigation. Older browser uploads may leave duplicate top-level folders at `app/admin`, `app/knowledge`, or `app/people`. Those stale folders resolve to the same public URLs and cause Turbopack's “two parallel pages” error. The `prebuild` script removes only those obsolete top-level route folders before every production build; API routes under `app/api` are not affected.
+The canonical pages live under `app/(workspace)` so the shared application shell persists across navigation. Older browser uploads may leave an obsolete `app/page.tsx` file or duplicate top-level folders at `app/admin`, `app/knowledge`, or `app/people`. The old root page can still pass the removed `initialView` prop, while the duplicate folders resolve to the same public URLs and cause Turbopack's “two parallel pages” error. The route-preparation script removes only these obsolete top-level UI routes before both type checking and production builds; API routes under `app/api` are not affected.
 
 ## Run and deploy
 
@@ -213,7 +213,7 @@ npm run dev
 
 ```bash
 git add .
-git commit -m "Fix Direct Line responses, loading trivia, avatars, and navigation"
+git commit -m "Remove obsolete initialView route and preserve workspace navigation"
 git push origin main
 ```
 

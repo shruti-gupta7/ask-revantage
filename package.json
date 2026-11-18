@@ -7,6 +7,7 @@
     "prebuild": "node scripts/prepare-route-tree.mjs",
     "build": "next build",
     "start": "next start",
+    "pretypecheck": "node scripts/prepare-route-tree.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
