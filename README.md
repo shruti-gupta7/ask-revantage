@@ -1,125 +1,124 @@
 # Ask Revantage
 
-Ask Revantage is a hackathon-ready employee knowledge experience that turns scattered workplace information into clear, source-linked answers. When the demo cannot answer confidently, it classifies the question and creates a trackable request for a support team instead of guessing.
+**One question. One place. One answer.**
 
-> **Data safety:** this repository contains synthetic demo data only. Do not add real, confidential, personal, production, or client information.
+Ask Revantage is a Next.js employee knowledge experience for finding workplace information, checking the source, and reaching the right support route when an answer is not available. The current build includes a searchable policy library, policy-grounded responses, local request tracking, named routing contacts with local avatars, and a server-side connection point for a Microsoft Copilot Studio agent.
 
-## Why this matters
+## What is included
 
-Employees often lose time searching across policy libraries, service pages, PDFs and support channels. Ask Revantage provides one front door for People, cab/travel, workplace, technology and finance questions while preserving a human escalation path.
+- Premium Revantage-aligned interface using Navy, Bronze, Light Blue, Medium Blue, Tan, and Light Gray
+- Accessible glassmorphism surface system with layered translucency, 20px backdrop blur, refraction edges, and solid-color fallbacks
+- Tasteful staged reveal animations with automatic reduced-motion support
+- Ask Revantage logo stored in `public/assets/ask-revantage-logo.jpeg`
+- Route-specific metadata for the home, knowledge, support, and admin pages, including canonical links and Open Graph/Twitter cards
+- Generated favicon, Apple touch icon, web app manifest, and branded Open Graph image
+- Five sample policy documents covering:
+  - People and leave
+  - Cab and late-night transport
+  - Travel and expenses
+  - IT access and security
+  - Workplace and facilities
+- Policy matching with source title, section, version, and document link
+- Exactly three suggested prompt pills on the homepage
+- Supporting source-document card inside each policy answer, with open-in-new-tab and download actions
+- Named support routes and illustrated picture avatars
+- Request creation and browser-based request history
+- Knowledge, routing, and admin views
+- Microsoft Copilot Studio integration through Direct Line, with a policy-library fallback
+- Responsive design for desktop, tablet, and mobile
 
-## Functional scope
+## Application routes and metadata
 
-- Premium Revantage-branded user and admin workspaces
-- Source-grounded Q&A with confidence and citation cards
-- Knowledge hub with status and ownership metadata
-- Request classification and routing when an answer is uncertain
-- Admin source connection workflow with a mandatory synthetic-data confirmation
-- Operational queue and analytics views
-- Next.js API routes for Q&A, source management, requests and health checks
-- Sensitive-pattern blocking and an automated repository data-safety check
-- Microsoft-first target architecture: Entra ID, SharePoint/Microsoft Graph, Azure AI Search and Azure OpenAI
-- Optional server-side Copilot Studio agent adapter with an explicit demo fallback
-- Bundled three-page synthetic HR-policy PDF for safe ingestion and citation demonstrations
+Each main experience has a real Next.js route and dedicated metadata:
 
-## Tech stack
+| Route | Page | Metadata purpose |
+|---|---|---|
+| `/` | Ask Revantage | Employee policy assistant and trusted-answer experience |
+| `/knowledge` | Knowledge library | Available policy sources and approved answer sections |
+| `/support` | Support routes | Named department contacts and escalation experience |
+| `/admin` | Admin overview | Knowledge coverage, AI readiness, and routed requests |
 
-- Next.js 16 App Router, React 19 and TypeScript
-- Tailwind CSS 4 with Revantage design tokens
-- Next.js route handlers as a replaceable demo backend adapter
-- GitHub Actions for data safety, types, lint and production build
-- Vercel-ready configuration
+Set `NEXT_PUBLIC_SITE_URL` in Vercel to the production domain so canonical and social metadata resolve to the final deployment URL.
 
-## Microsoft and build-tool story
+## Microsoft and development tools
 
-| Tool | Role in Ask Revantage |
-|---|---|
-| Microsoft Copilot | Assisted ideation, UX refinement, coding, documentation and test planning; disclosed below and in `AI_DISCLOSURE.md` |
-| Microsoft Copilot Studio | Target AI-agent orchestration option; the repository includes a secure server-side adapter contract and uses the deterministic demo provider by default |
-| SharePoint and OneDrive | Realistic future source types for permission-aware knowledge ingestion; no production tenant is connected in this hackathon build |
-| Microsoft Excel | Represented as a realistic structured source type using synthetic metadata only |
-| Microsoft Entra ID | Target authentication and role-based access layer for a production pilot |
-| Azure AI Search / Azure OpenAI | Documented production retrieval and grounded-generation path, subject to approval and responsible-AI controls |
-| Git and GitHub | Version control, public source-code delivery and GitHub Actions verification |
-| Next.js, React, TypeScript and Tailwind CSS | Functional full-stack application and premium responsive interface |
-| Vercel | Chosen Next.js deployment target for the public demo |
+This hackathon solution was shaped with Microsoft Copilot for research, planning, content refinement, and coding support. The conversational integration is designed for Microsoft Copilot Studio. The production direction can use Microsoft 365 sources such as SharePoint, OneDrive, Excel, and approved document libraries. GitHub provides source control, GitHub Codespaces supports browser-based development, and Vercel builds and hosts the Next.js application.
 
-The running hackathon demo does **not** call Copilot Studio, SharePoint, OneDrive, Excel, Microsoft Graph, Azure OpenAI or another production service unless an approved server-side test adapter is explicitly configured. This distinction keeps the demo honest and data-safe.
+## Run locally or in GitHub Codespaces
 
-## Synthetic sample document
-
-The Knowledge Hub includes [`public/demo-data/synthetic-hr-policy.pdf`](public/demo-data/synthetic-hr-policy.pdf), a three-page fictional HR-policy-format document. It is visibly watermarked, repeatedly labeled synthetic, and contains no real Revantage policy or employee information. Regenerate it with:
+Requirements: Node.js 20.9 or later.
 
 ```bash
-python -m pip install -r requirements-docs.txt
-python scripts/generate-synthetic-hr-policy.py
-```
-
-## Run locally
-
-Prerequisites: Node.js 20.9+ (Node 22 LTS recommended), npm and Git.
-
-```bash
-git clone <YOUR_PUBLIC_REPOSITORY_URL>
-cd ask-revantage
-cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The demo adapter needs no environment variables.
+Open `http://localhost:3000`.
 
-Verify the submission before publishing:
-
-```bash
-npm run verify
-```
-
-## Deploy to Vercel
-
-1. Push this repository to a **public GitHub repository**.
-2. Sign in to Vercel and choose **Add New → Project**.
-3. Import the GitHub repository. Vercel detects Next.js automatically.
-4. Keep the build command as `npm run build` and deploy.
-5. For the demo, do not add production credentials. If a later approved environment connects Microsoft services, add secrets only in Vercel project settings and follow company security review.
-
-The in-memory demo adapter resets when a serverless instance restarts. This is intentional for a safe hackathon demonstration. See [Architecture](docs/ARCHITECTURE.md) for the production path.
-
-### Optional Copilot Studio agent
-
-An approved server-side broker can connect the application to a Copilot Studio agent without exposing credentials to the browser. Set `AI_PROVIDER=copilot-studio`, `COPILOT_STUDIO_AGENT_ENDPOINT` and `COPILOT_STUDIO_AGENT_TOKEN` in an approved non-production environment. The broker must accept `{ question, context }` and return `{ answer, confidence, team, sources }`. Keep the default `AI_PROVIDER=demo` for public judging.
-
-## Submission package
-
-Create the HackerEarth archive after verification:
+For a production check:
 
 ```bash
-npm run verify
-cd ..
-tar --exclude='ask-revantage/node_modules' --exclude='ask-revantage/.next' --exclude='ask-revantage/.git' -czf ask-revantage-hackathon.tar.gz ask-revantage
-# or: zip -r ask-revantage-hackathon.zip ask-revantage -x 'ask-revantage/node_modules/*' 'ask-revantage/.next/*' 'ask-revantage/.git/*'
+npm run typecheck
+npm run build
+npm start
 ```
 
-Include the public GitHub URL, deployed Vercel URL, [pitch script](docs/PITCH_SCRIPT.md), [AI disclosure](AI_DISCLOSURE.md), and run instructions in the HackerEarth entry.
+## Connect the Copilot Studio agent
 
-## Responsible AI and data use
+The app answers known policy questions from the local document library first. Questions without a confident match are sent to Copilot Studio when a server-side connection is configured. If the agent is unavailable, the app shows the best human support route.
 
-- All seeded policies, people, requests, metrics and answers are fictional and explicitly labeled as synthetic samples.
-- The demo does not connect to SharePoint, Microsoft Graph, HR systems or any production source.
-- The answer service uses deterministic keyword matching; production generative AI is a documented future adapter, not an undisclosed live dependency.
-- Potential emails, Indian mobile numbers, identification numbers and populated secrets are blocked by API guardrails.
-- High-impact decisions must be verified against an authoritative production source and remain subject to human review.
+For a matched policy answer, the chat response includes the supporting document title, matching section, category, version, owner, effective date, and summary. Users can open the source in a new browser tab or download the document directly from the response.
 
-Read [DATA_POLICY.md](DATA_POLICY.md), [RESPONSIBLE_AI.md](RESPONSIBLE_AI.md), and [SECURITY.md](SECURITY.md) before changing the demo.
+1. Publish the agent in Microsoft Copilot Studio.
+2. Open **Channels** and configure the **Mobile app** or Direct Line channel.
+3. Copy the token endpoint or Direct Line secret.
+4. In Vercel, open **Project settings → Environment Variables**.
+5. Add one of the following:
 
-## AI disclosure
+```text
+COPILOT_STUDIO_TOKEN_ENDPOINT=<token endpoint from Copilot Studio>
+```
 
-Microsoft Copilot assisted with product design, code generation, documentation and test planning. The implementation was reviewed and adapted for the hackathon’s synthetic-data, security, privacy and responsible-AI requirements. Full details are in [AI_DISCLOSURE.md](AI_DISCLOSURE.md).
+or
 
-## Brand choices
+```text
+COPILOT_STUDIO_DIRECT_LINE_SECRET=<server-side secret>
+```
 
-The UI uses the approved Revantage Navy, Bronze, Light Blue, Medium Blue, Tan and Light Gray palette. Teal and Pale Blue are used only because this is an internal application. Genath and Untitled Sans were not available, so the approved fallbacks are used: Georgia for headings and Arial for body/UI text. The supplied logo artwork is preserved without recoloring or distortion.
+Optional:
 
-## License and marks
+```text
+COPILOT_STUDIO_DIRECT_LINE_BASE_URL=https://directline.botframework.com
+```
 
-Source code is available under the [MIT License](LICENSE) for hackathon judging, subject to applicable corporate policies. Revantage names, marks and supplied artwork are not granted under the MIT license; see [NOTICE.md](NOTICE.md).
+6. Redeploy the latest commit.
+
+Never place the Direct Line secret in a variable prefixed with `NEXT_PUBLIC_`, and never commit credentials to GitHub.
+
+## Policy content
+
+The documents in `public/documents/` contain hackathon sample content and do not represent official Revantage policy. The connector types and workflow are designed to demonstrate how approved SharePoint, OneDrive, Excel, and document-library sources can be added later.
+
+To add a policy:
+
+1. Add the source document under `public/documents/`.
+2. Add its metadata and approved answer sections to `data/knowledge.ts`.
+3. Confirm the relevant keywords and support route.
+4. Run the build and test at least one matched and one unmatched question.
+
+## Repository update workflow
+
+When local developer tools are restricted:
+
+1. Download the updated project ZIP.
+2. Open the GitHub repository in Codespaces.
+3. Upload the project contents at the repository root so `app/`, `data/`, `public/`, and `package.json` are siblings.
+4. Run `npm install`, `npm run typecheck`, and `npm run build`.
+5. Commit and push to `main`.
+6. Let Vercel deploy the new commit automatically.
+
+## Brand implementation
+
+The interface uses Georgia for display headings and Arial for body/UI copy because the licensed Genath and Untitled Sans font files are not included in the repository. The supplied logo is used without recoloring or stretching.
+
+The visual system takes implementation cues from the Hype4 Glassmorphism Generator: translucent surfaces, a 20px backdrop blur, bright refraction edges, restrained depth shadows, and layered branded backgrounds. Readability remains the priority, so content surfaces use high-opacity white or Navy treatments, focus states remain visible, browsers without backdrop-filter support receive solid fallbacks, and reveal animations are disabled when a user prefers reduced motion.
