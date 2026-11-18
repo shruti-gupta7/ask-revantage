@@ -1,7 +1,2 @@
-import { metadataFor } from "@/data/page-metadata";
-
-export const metadata = metadataFor("people");
-
-export default function PeopleDirectoryPage() {
-  return null;
-}
+import { PeopleView } from "@/components/people-view";
+export default function PeoplePage() { return <PeopleView />; }

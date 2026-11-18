@@ -1,10 +1,6 @@
-import AskRevantageApp from "@/components/ask-revantage-app";
+import { ChatProvider } from "@/context/chat-context";
+import { WorkspaceShell } from "@/components/workspace-shell";
 
-/**
- * Shared client workspace. Keeping the app shell in a layout preserves its
- * conversation state and prevents route pages from remounting it on each
- * sidebar navigation.
- */
-export default function WorkspaceLayout() {
-  return <AskRevantageApp />;
+export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+  return <ChatProvider><WorkspaceShell>{children}</WorkspaceShell></ChatProvider>;
 }

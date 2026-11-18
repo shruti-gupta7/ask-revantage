@@ -1,7 +1,2 @@
-import { metadataFor } from "@/data/page-metadata";
-
-export const metadata = metadataFor("knowledge");
-
-export default function KnowledgePage() {
-  return null;
-}
+import { KnowledgeView } from "@/components/knowledge-view";
+export default function KnowledgePage() { return <KnowledgeView />; }
