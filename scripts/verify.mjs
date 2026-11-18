@@ -18,6 +18,7 @@ const obsolete = [
   "app/api/requests",
   "app/api/sources",
   "components/workspace-shell.tsx",
+  "context/chat-context.tsx",
   "lib/direct-line-client.ts",
   "lib/direct-line-classifier.js",
   "lib/direct-line-classifier.d.ts",

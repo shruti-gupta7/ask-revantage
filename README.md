@@ -75,7 +75,7 @@ PEOPLE_DIRECTORY_API_TOKEN=
 
 The previous PostCSS failure is fixed because `postcss.config.mjs` and `package.json` now agree: `@tailwindcss/postcss` is explicitly installed as a development dependency. The interface uses authored CSS, but keeping the plugin dependency resolves the existing build configuration without a risky build-only workaround.
 
-The pre-typecheck and prebuild cleanup also removes files left behind by older ZIP releases. Those legacy files imported `SupportRequest`, `KnowledgeSource`, `AdminIcon`, and `ChatIcon`, and included an untyped CommonJS classifier. The current application no longer uses that request/store/workspace-shell stack, so deleting those stale files is safer than restoring incompatible compatibility types.
+The pre-typecheck and prebuild cleanup also removes files left behind by older ZIP releases. Those legacy files imported `SupportRequest`, `KnowledgeSource`, `AdminIcon`, and `ChatIcon`, included an untyped CommonJS classifier, and included `context/chat-context.tsx`, which imported the superseded `lib/direct-line-client` module. The current chat uses `components/chat-view.tsx` with `lib/directline.ts`, so deleting the stale files is safer than restoring incompatible compatibility modules.
 
 ## Current hackathon architecture
 

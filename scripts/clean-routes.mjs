@@ -11,6 +11,7 @@ const obsoletePaths = [
   "app/api/requests",
   "app/api/sources",
   "components/workspace-shell.tsx",
+  "context",
   "lib/direct-line-client.ts",
   "lib/direct-line-classifier.js",
   "lib/direct-line-classifier.d.ts",
