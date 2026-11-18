@@ -20,7 +20,7 @@ const pageMetadata: Record<AppView, { title: string; description: string; path: 
   },
   admin: {
     title: "Admin Overview | Ask Revantage",
-    description: "Review knowledge coverage, Copilot Studio connection readiness, support routes, and routed requests.",
+    description: "Configure dynamic data sources, review Copilot Studio connection readiness, and manage knowledge integrations without seeded admin records.",
     path: "/admin",
   },
 };

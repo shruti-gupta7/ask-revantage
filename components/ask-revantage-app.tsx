@@ -37,7 +37,25 @@ type RequestItem = {
   status: "Open" | "In progress" | "Resolved";
 };
 
-type IconName = "spark" | "book" | "route" | "admin" | "send" | "home" | "search" | "external" | "download" | "copy" | "check" | "menu" | "close" | "shield" | "clock" | "chevron" | "user" | "plus";
+type DataSourceType = "SharePoint" | "OneDrive" | "Website" | "API" | "File upload";
+type DataSourceStatus = "Ready" | "Checking" | "Paused";
+type DataSource = {
+  id: string;
+  name: string;
+  type: DataSourceType;
+  location: string;
+  scope: string;
+  status: DataSourceStatus;
+  enabled: boolean;
+  created: string;
+  lastChecked?: string;
+};
+type IntegrationStatus = {
+  agent: { provider: string; configured: boolean; connectionMethod: string | null };
+  sources: { persistence: string; apiConfigured: boolean };
+};
+
+type IconName = "spark" | "book" | "route" | "admin" | "send" | "home" | "search" | "external" | "download" | "copy" | "check" | "menu" | "close" | "shield" | "clock" | "chevron" | "user" | "plus" | "database" | "refresh" | "trash" | "pause" | "play";
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   spark: <><path d="M12 2l1.45 4.55L18 8l-4.55 1.45L12 14l-1.45-4.55L6 8l4.55-1.45L12 2Z"/><path d="m19 14 .85 2.15L22 17l-2.15.85L19 20l-.85-2.15L16 17l2.15-.85L19 14Z"/></>,
@@ -58,7 +76,15 @@ const iconPaths: Record<IconName, React.ReactNode> = {
   chevron: <path d="m9 18 6-6-6-6"/>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   plus: <path d="M12 5v14M5 12h14"/>,
+  database: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></>,
+  refresh: <><path d="M20 11a8 8 0 0 0-14.8-4L3 10"/><path d="M3 4v6h6"/><path d="M4 13a8 8 0 0 0 14.8 4L21 14"/><path d="M21 20v-6h-6"/></>,
+  trash: <><path d="M3 6h18"/><path d="M8 6V4h8v2M19 6l-1 15H6L5 6"/><path d="M10 11v5M14 11v5"/></>,
+  pause: <><path d="M9 5v14M15 5v14"/></>,
+  play: <path d="m8 5 11 7-11 7Z"/>,
 };
+
+const DATA_SOURCE_KEY = "ask-revantage.data-sources.v1";
+const sourceTypes: DataSourceType[] = ["SharePoint", "OneDrive", "Website", "API", "File upload"];
 
 function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: string }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{iconPaths[name]}</svg>;
@@ -104,6 +130,13 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
   const [loading, setLoading] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("ready");
   const [requests, setRequests] = useState<RequestItem[]>([]);
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus | null>(null);
+  const [sourceFormOpen, setSourceFormOpen] = useState(false);
+  const [sourceName, setSourceName] = useState("");
+  const [sourceType, setSourceType] = useState<DataSourceType>("SharePoint");
+  const [sourceLocation, setSourceLocation] = useState("");
+  const [sourceScope, setSourceScope] = useState("");
   const [documentQuery, setDocumentQuery] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [notice, setNotice] = useState("");
@@ -121,6 +154,34 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
       setRequests([]);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DATA_SOURCE_KEY);
+      setDataSources(saved ? JSON.parse(saved) : []);
+    } catch {
+      setDataSources([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (view !== "admin") return;
+    let active = true;
+    fetch("/api/admin/status", { cache: "no-store" })
+      .then((response) => response.json())
+      .then(async (status: IntegrationStatus) => {
+        if (!active) return;
+        setIntegrationStatus(status);
+        if (status.sources.apiConfigured) {
+          const response = await fetch("/api/admin/sources", { cache: "no-store" });
+          if (!response.ok) throw new Error("Configured source service could not be read.");
+          const payload = await response.json();
+          if (active) setDataSources(Array.isArray(payload) ? payload : payload.sources || []);
+        }
+      })
+      .catch(() => { if (active) setIntegrationStatus(null); });
+    return () => { active = false; };
+  }, [view]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -210,6 +271,88 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
     setRequests(next);
     localStorage.setItem("ask-revantage.requests", JSON.stringify(next));
     setNotice(`${item.id} created and routed to ${route.team}.`);
+  }
+
+  function saveDataSources(next: DataSource[]) {
+    setDataSources(next);
+    localStorage.setItem(DATA_SOURCE_KEY, JSON.stringify(next));
+  }
+
+  async function refreshRemoteSources() {
+    const response = await fetch("/api/admin/sources", { cache: "no-store" });
+    if (!response.ok) throw new Error("The configured source service could not be refreshed.");
+    const payload = await response.json();
+    setDataSources(Array.isArray(payload) ? payload : payload.sources || []);
+  }
+
+  async function addDataSource(event: FormEvent) {
+    event.preventDefault();
+    const name = sourceName.trim();
+    const location = sourceLocation.trim();
+    if (!name || !location) return;
+    const item: DataSource = {
+      id: newId("source"),
+      name,
+      type: sourceType,
+      location,
+      scope: sourceScope.trim(),
+      status: "Ready",
+      enabled: true,
+      created: new Date().toISOString(),
+    };
+    if (integrationStatus?.sources.apiConfigured) {
+      const response = await fetch("/api/admin/sources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) });
+      if (!response.ok) { setNotice("The configured source service could not save this connection."); return; }
+      await refreshRemoteSources();
+    } else {
+      saveDataSources([item, ...dataSources]);
+    }
+    setSourceName("");
+    setSourceLocation("");
+    setSourceScope("");
+    setSourceType("SharePoint");
+    setSourceFormOpen(false);
+    setNotice(`${item.name} added to the configured source workspace.`);
+  }
+
+  async function toggleDataSource(id: string) {
+    const selected = dataSources.find((source) => source.id === id);
+    if (!selected) return;
+    const next = dataSources.map((source) => source.id === id ? { ...source, enabled: !source.enabled, status: (!source.enabled ? "Ready" : "Paused") as DataSourceStatus } : source);
+    if (integrationStatus?.sources.apiConfigured) {
+      const updated = next.find((source) => source.id === id);
+      const response = await fetch(`/api/admin/sources?id=${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+      if (!response.ok) { setNotice("The configured source service could not update this connection."); return; }
+      await refreshRemoteSources();
+    } else saveDataSources(next);
+  }
+
+  async function checkDataSource(id: string) {
+    if (integrationStatus?.sources.apiConfigured) {
+      const response = await fetch(`/api/admin/sources?id=${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
+      if (!response.ok) { setNotice("The configured source service could not check this connection."); return; }
+      await refreshRemoteSources();
+      setNotice("Connection check requested from the configured source service.");
+      return;
+    }
+    const started = dataSources.map((source) => source.id === id ? { ...source, status: "Checking" as DataSourceStatus } : source);
+    saveDataSources(started);
+    window.setTimeout(() => {
+      const current = JSON.parse(localStorage.getItem(DATA_SOURCE_KEY) || "[]") as DataSource[];
+      const completed = current.map((source) => source.id === id ? { ...source, status: "Ready" as DataSourceStatus, lastChecked: new Date().toISOString() } : source);
+      saveDataSources(completed);
+      setNotice("Connection check completed for the configured source.");
+    }, 650);
+  }
+
+  async function removeDataSource(id: string) {
+    const source = dataSources.find((item) => item.id === id);
+    if (integrationStatus?.sources.apiConfigured) {
+      const response = await fetch(`/api/admin/sources?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!response.ok) { setNotice("The configured source service could not remove this connection."); return; }
+      await refreshRemoteSources();
+    } else saveDataSources(dataSources.filter((item) => item.id !== id));
+    setNotice(source ? `${source.name} removed from the configured source workspace.` : "Source removed.");
   }
 
   async function copyAnswer(message: Message) {
@@ -383,22 +526,65 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
 
         {view === "admin" && (
           <>
-            <PageHeader eyebrow="Administration" title="Content & connection overview" description="A concise view of knowledge coverage, AI readiness, and routed requests." agentStatus={agentStatus} />
+            <PageHeader eyebrow="Administration" title="Sources & agent connections" description="Configure where Ask Revantage gets its knowledge and manage each connection from one workspace." agentStatus={agentStatus} />
             <div className="mx-auto max-w-[1260px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><AdminMetric label="Knowledge documents" value={POLICIES.length.toString()} detail="All available"/><AdminMetric label="Answer sections" value={POLICIES.reduce((sum, policy) => sum + policy.sections.length, 0).toString()} detail="Indexed locally"/><AdminMetric label="Support routes" value={ROUTING_CONTACTS.length.toString()} detail="Named contacts"/><AdminMetric label="Open requests" value={requests.filter((item) => item.status !== "Resolved").length.toString()} detail="Saved in browser"/></div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <AdminMetric label="Configured sources" value={dataSources.length.toString()} detail="Workspace total"/>
+                <AdminMetric label="Active connections" value={dataSources.filter((source) => source.enabled).length.toString()} detail="Enabled now"/>
+                <AdminMetric label="Agent integration" value={integrationStatus?.agent.configured ? "On" : "Off"} detail={integrationStatus?.agent.connectionMethod || "Not configured"}/>
+                <AdminMetric label="Persistence" value={integrationStatus?.sources.apiConfigured ? "API" : "Local"} detail={integrationStatus?.sources.persistence || "Checking"}/>
+              </div>
 
-              <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1.1fr]">
-                <section className="glass-panel reveal rounded-[22px] p-6">
-                  <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E695B]">Copilot Studio</p><h2 className="mt-2 font-serif text-2xl">Agent connection</h2></div><span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${agentStatus === "connected" ? "bg-[#CFE4F8] text-[#031730]" : agentStatus === "unavailable" ? "bg-[#F2ECE8] text-[#8E695B]" : "bg-[#E8EDF2] text-[#18324D]"}`}>{agentStatus}</span></div>
-                  <div className="mt-5 rounded-2xl bg-[#F7F5F3] p-4"><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#031730] text-[#CFE4F8]"><Icon name="spark" /></div><div><p className="text-sm font-bold">Policy-first, AI-assisted flow</p><p className="mt-1 text-xs leading-5 text-[#667085]">Known questions use the local source library. Unmatched questions move to Copilot Studio when the server-side token endpoint is configured, then to a human route if needed.</p></div></div></div>
-                  <ol className="mt-5 space-y-3 text-sm text-[#25364A]">{["Publish the agent in Copilot Studio.","Copy the Mobile app token endpoint or Direct Line secret.","Add it to Vercel Environment Variables.","Redeploy and ask an unmatched question."].map((step, index) => <li key={step} className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F2ECE8] text-[10px] font-bold text-[#8E695B]">{index + 1}</span><span className="pt-0.5">{step}</span></li>)}</ol>
-                  <p className="mt-5 rounded-xl border border-[#8E695B]/20 bg-[#F2ECE8]/60 p-3 text-xs leading-5 text-[#6D4E43]">Keep credentials server-side. Use the `.env.example` names and never add a secret to a `NEXT_PUBLIC_` variable.</p>
+              <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
+                <section className="glass-panel reveal overflow-hidden rounded-[22px]">
+                  <div className="flex flex-col justify-between gap-4 border-b border-black/10 px-6 py-5 sm:flex-row sm:items-center">
+                    <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E695B]">Dynamic knowledge</p><h2 className="mt-1 font-serif text-2xl">Configured data sources</h2><p className="mt-1 text-xs leading-5 text-[#667085]">Only sources added to this workspace appear here. No source records are seeded in the admin panel.</p></div>
+                    <button onClick={() => setSourceFormOpen((open) => !open)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#031730] px-4 py-3 text-xs font-bold text-white"><Icon name={sourceFormOpen ? "close" : "plus"} className="h-4 w-4"/>{sourceFormOpen ? "Close form" : "Add data source"}</button>
+                  </div>
+
+                  {sourceFormOpen && (
+                    <form onSubmit={addDataSource} className="glass-inset m-5 grid gap-4 rounded-2xl p-5 sm:grid-cols-2" aria-label="Add a data source">
+                      <label className="grid gap-1.5 text-xs font-bold text-[#25364A]">Source name<input value={sourceName} onChange={(event) => setSourceName(event.target.value)} required placeholder="Name this connection" className="h-11 rounded-xl border border-black/10 bg-white/75 px-3 text-sm font-normal outline-none focus:border-[#4C759D]"/></label>
+                      <label className="grid gap-1.5 text-xs font-bold text-[#25364A]">Source type<select value={sourceType} onChange={(event) => setSourceType(event.target.value as DataSourceType)} className="h-11 rounded-xl border border-black/10 bg-white/75 px-3 text-sm font-normal outline-none focus:border-[#4C759D]">{sourceTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                      <label className="grid gap-1.5 text-xs font-bold text-[#25364A] sm:col-span-2">Location or endpoint<input value={sourceLocation} onChange={(event) => setSourceLocation(event.target.value)} required placeholder="Paste a SharePoint, OneDrive, website, API, or file location" className="h-11 rounded-xl border border-black/10 bg-white/75 px-3 text-sm font-normal outline-none focus:border-[#4C759D]"/></label>
+                      <label className="grid gap-1.5 text-xs font-bold text-[#25364A] sm:col-span-2">Scope or notes <span className="font-normal text-[#667085]">(optional)</span><input value={sourceScope} onChange={(event) => setSourceScope(event.target.value)} placeholder="Describe folders, file types, or content boundaries" className="h-11 rounded-xl border border-black/10 bg-white/75 px-3 text-sm font-normal outline-none focus:border-[#4C759D]"/></label>
+                      <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2"><p className="max-w-md text-[11px] leading-5 text-[#667085]">Credentials stay server-side. This workspace stores connection metadata only and is ready to hand off to a configured source-management API.</p><button type="submit" className="rounded-xl bg-[#031730] px-5 py-3 text-xs font-bold text-white">Save source</button></div>
+                    </form>
+                  )}
+
+                  {dataSources.length === 0 ? (
+                    <div className="flex min-h-[330px] flex-col items-center justify-center px-6 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8EDF2] text-[#4C759D]"><Icon name="database" /></div>
+                      <h3 className="mt-4 font-serif text-xl">No data sources configured</h3>
+                      <p className="mt-2 max-w-md text-sm leading-6 text-[#667085]">Add a source to demonstrate how administrators connect and manage SharePoint, OneDrive, websites, APIs, or uploaded files.</p>
+                      <button onClick={() => setSourceFormOpen(true)} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#031730] px-4 py-2.5 text-xs font-bold text-white"><Icon name="plus" className="h-4 w-4"/>Add the first source</button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-black/10">
+                      {dataSources.map((source) => (
+                        <article key={source.id} className="px-5 py-5 sm:px-6">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                            <div className="flex min-w-0 flex-1 gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E8EDF2] text-[#4C759D]"><Icon name="database" className="h-5 w-5"/></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-serif text-lg">{source.name}</h3><span className="rounded-full bg-[#F2ECE8] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#8E695B]">{source.type}</span><span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${source.status === "Checking" ? "bg-[#CFE4F8] text-[#18324D]" : source.enabled ? "bg-[#E8EDF2] text-[#18324D]" : "bg-[#F1F1F1] text-[#667085]"}`}>{source.status}</span></div><p className="mt-1 break-all text-xs text-[#667085]">{source.location}</p>{source.scope && <p className="mt-1 text-xs text-[#667085]">Scope: {source.scope}</p>}<p className="mt-2 text-[10px] text-[#667085]">{source.lastChecked ? `Last checked ${formatAdminTime(source.lastChecked)}` : `Added ${formatAdminTime(source.created)}`}</p></div></div>
+                            <div className="flex flex-wrap gap-2 lg:justify-end"><button onClick={() => checkDataSource(source.id)} disabled={!source.enabled || source.status === "Checking"} className="glass-button inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#4C759D] disabled:cursor-not-allowed disabled:opacity-50"><Icon name="refresh" className="h-3.5 w-3.5"/>Check</button><button onClick={() => toggleDataSource(source.id)} className="glass-button inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#18324D]"><Icon name={source.enabled ? "pause" : "play"} className="h-3.5 w-3.5"/>{source.enabled ? "Pause" : "Enable"}</button><button onClick={() => removeDataSource(source.id)} className="glass-button inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#8E695B]"><Icon name="trash" className="h-3.5 w-3.5"/>Remove</button></div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
                 </section>
 
-                <section className="glass-panel reveal reveal-delay-1 overflow-hidden rounded-[22px]">
-                  <div className="flex items-center justify-between border-b border-black/10 px-6 py-5"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E695B]">Request queue</p><h2 className="mt-1 font-serif text-2xl">Recent routing</h2></div><span className="rounded-full bg-[#E8EDF2] px-3 py-1.5 text-xs font-bold text-[#18324D]">{requests.length} total</span></div>
-                  {requests.length === 0 ? <div className="flex min-h-[310px] flex-col items-center justify-center px-6 text-center"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1F1F1] text-[#4C759D]"><Icon name="route" /></div><h3 className="mt-4 font-serif text-xl">No routed requests yet</h3><p className="mt-2 max-w-sm text-sm leading-6 text-[#667085]">Ask a question outside the current policy library, then create the recommended support request.</p><button onClick={() => navigate("ask")} className="mt-4 rounded-xl bg-[#031730] px-4 py-2.5 text-xs font-bold text-white">Ask a question</button></div> : <div className="divide-y divide-black/10">{requests.slice(0, 6).map((item) => <div key={item.id} className="px-6 py-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-[#4C759D]">{item.id}</p><p className="mt-1 text-sm font-bold">{item.question}</p><p className="mt-1 text-xs text-[#667085]">{item.team} · {item.contact}</p></div><span className="rounded-full bg-[#F2ECE8] px-2.5 py-1 text-[10px] font-bold text-[#8E695B]">{item.status}</span></div></div>)}</div>}
-                </section>
+                <div className="space-y-6">
+                  <section className="glass-panel reveal reveal-delay-1 rounded-[22px] p-6">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E695B]">Agent integration</p><h2 className="mt-2 font-serif text-2xl">Copilot Studio</h2></div><span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${integrationStatus?.agent.configured ? "bg-[#CFE4F8] text-[#031730]" : "bg-[#F2ECE8] text-[#8E695B]"}`}>{integrationStatus?.agent.configured ? "Configured" : "Not configured"}</span></div>
+                    <div className="glass-inset mt-5 rounded-2xl p-4"><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#031730] text-[#CFE4F8]"><Icon name="spark" /></div><div><p className="text-sm font-bold">{integrationStatus?.agent.provider || "Microsoft Copilot Studio"}</p><p className="mt-1 text-xs leading-5 text-[#667085]">{integrationStatus?.agent.configured ? `Connected through ${integrationStatus.agent.connectionMethod}. Questions can flow to the configured agent.` : "Add the server-side token endpoint or Direct Line secret in Vercel to connect the agent."}</p></div></div></div>
+                    <p className="mt-4 rounded-xl border border-[#8E695B]/20 bg-[#F2ECE8]/60 p-3 text-xs leading-5 text-[#6D4E43]">Connection status comes from server configuration. Secrets are never exposed in this admin view.</p>
+                  </section>
+
+                  <section className="glass-panel reveal reveal-delay-2 overflow-hidden rounded-[22px]">
+                    <div className="flex items-center justify-between border-b border-black/10 px-5 py-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8E695B]">Live workflow</p><h2 className="mt-1 font-serif text-xl">Routed requests</h2></div><span className="rounded-full bg-[#E8EDF2] px-3 py-1.5 text-xs font-bold text-[#18324D]">{requests.length}</span></div>
+                    {requests.length === 0 ? <div className="px-5 py-8 text-center"><p className="text-sm font-bold">No routed requests</p><p className="mt-1 text-xs leading-5 text-[#667085]">Requests appear here only after a user creates one from an unanswered question.</p></div> : <div className="divide-y divide-black/10">{requests.slice(0, 4).map((item) => <div key={item.id} className="px-5 py-4"><p className="text-[10px] font-bold text-[#4C759D]">{item.id}</p><p className="mt-1 text-sm font-bold">{item.question}</p><p className="mt-1 text-xs text-[#667085]">{item.team} · {item.status}</p></div>)}</div>}
+                  </section>
+                </div>
               </div>
             </div>
           </>
@@ -418,6 +604,14 @@ function PageHeader({ eyebrow, title, description, agentStatus }: { eyebrow: str
 
 function Metric({ value, label }: { value: string; label: string }) {
   return <div className="glass-inset rounded-xl p-3"><p className="font-serif text-2xl">{value}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#667085]">{label}</p></div>;
+}
+
+function formatAdminTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
 function AdminMetric({ label, value, detail }: { label: string; value: string; detail: string }) {

@@ -24,6 +24,10 @@ Ask Revantage is a Next.js employee knowledge experience for finding workplace i
 - Named support routes and illustrated picture avatars
 - Request creation and browser-based request history
 - Knowledge, routing, and admin views
+- Admin data-source workspace with no seeded source or policy records
+- Add, check, pause, enable, and remove configured SharePoint, OneDrive, website, API, or file connections
+- Dynamic server-side Copilot Studio configuration status, without exposing credentials
+- Optional `DATA_SOURCE_API_URL` proxy for server-managed connector records; browser workspace storage is used when it is not configured
 - Microsoft Copilot Studio integration through Direct Line, with a policy-library fallback
 - Responsive design for desktop, tablet, and mobile
 
@@ -94,6 +98,19 @@ COPILOT_STUDIO_DIRECT_LINE_BASE_URL=https://directline.botframework.com
 6. Redeploy the latest commit.
 
 Never place the Direct Line secret in a variable prefixed with `NEXT_PUBLIC_`, and never commit credentials to GitHub.
+
+## Configure admin data-source management
+
+The admin panel starts with no data-source records. Administrators can add and manage connection metadata in the interface. Without a backend service, those records are stored in the current browser workspace so the full add/check/pause/enable/remove flow can be demonstrated safely.
+
+To load and manage records from a production service instead, set:
+
+```text
+DATA_SOURCE_API_URL=https://your-source-management-service.example/api/sources
+DATA_SOURCE_STORE=Server-managed
+```
+
+When configured, the Next.js server proxies `GET`, `POST`, `PATCH`, and `DELETE` requests through `/api/admin/sources`. The external service should return either a source array or an object with a `sources` array. Credentials for SharePoint, OneDrive, Microsoft Graph, or other connectors should remain in that service or a managed secret store—not in the browser or repository.
 
 ## Policy content
 
