@@ -16,8 +16,10 @@ Ask Revantage is a custom Next.js employee-help experience connected to a publis
 - Human escalation for unsupported questions
 - Dynamic **Admin Dashboard** with no seeded source or policy records
 - Responsive navigation, chat, Knowledge Library, People Directory, and Admin Dashboard
+- Single-source URL navigation in a shared workspace layout, with no duplicate content flash and full back/forward support
+- A concise demo knowledge-base fact below the loader that rotates every four seconds and stays static when reduced motion is preferred
 - Dedicated metadata, favicon, manifest, 1200×630 Open Graph image, and Twitter preview image
-- Local Shruti Gupta avatar at `public/assets/avatars/shruti-gupta.jpg`; fictional admins use separate illustrated avatars
+- Local Shruti Gupta avatar at `public/assets/avatars/shruti-gupta.jpg`, a raster PNG for Ethan Brooks, and separate illustrated fictional admin avatars
 
 ## Current hackathon implementation
 
@@ -106,7 +108,7 @@ Published Copilot Studio agent
 
 The Direct Line secret never enters browser code or an API response. The browser receives only a short-lived conversation token. The token request binds an unguessable `dl_` user ID and trusted origins derived from `NEXT_PUBLIC_SITE_URL` and the current request origin.
 
-The custom client keeps one conversation until **New conversation** is selected, refreshes the token before expiry, filters activities with `from.role === "bot"`, deduplicates activities, renders real agent text, normalizes citations, and surfaces human escalation when the answer is outside the agent's knowledge.
+The custom client keeps one conversation until **New conversation** is selected and refreshes the token before expiry. Before each question, it advances the Direct Line watermark and marks stale activities as seen. It then posts the question and polls asynchronously for up to 75 seconds, accepts agent messages even when Direct Line omits `from.role`, correlates activities to the current turn, deduplicates activity IDs, waits for a completed answer, normalizes citations, and surfaces human escalation when the answer is outside the agent's knowledge.
 
 ## Required Copilot Studio settings
 
@@ -209,11 +211,11 @@ npm run dev
 
 ```bash
 git add .
-git commit -m "Connect Ask Revant Bot and refine knowledge, people, and admin UX"
+git commit -m "Fix Direct Line responses, loading trivia, avatars, and navigation"
 git push origin main
 ```
 
-Vercel should deploy automatically. Test both themes, all three prompts, cited answers and source actions, unsupported-question escalation, People Directory search and Teams links, mobile navigation, and Admin Dashboard source simulation.
+Vercel should deploy automatically. Test both themes, all three prompts, the four-second waiting trivia, a delayed cited answer, source actions, unsupported-question escalation, Ethan Brooks's PNG avatar, People Directory search and Teams links, back/forward navigation, mobile navigation, and Admin Dashboard source simulation.
 
 ## Brand implementation
 

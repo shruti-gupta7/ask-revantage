@@ -35,7 +35,7 @@ export const ROUTING_CONTACTS: RoutingContact[] = [
     location: "Bengaluru",
     expertise: ["Office transport", "Facilities", "Visitors"],
     response: "Usually responds within four business hours",
-    avatar: "/assets/avatars/ethan-brooks.svg",
+    avatar: "/assets/avatars/ethan-brooks.png",
     teamsUpn: "ethan.brooks@example.com",
   },
   {

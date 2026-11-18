@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ROUTING_CONTACTS, routeForQuery, teamsChatUrl, type RoutingContact } from "@/data/routing";
 import { createDirectLineSession, isUnsupportedCopilotReply, sendToCopilot, type CopilotCitation, type DirectLineSession } from "@/lib/copilot-direct-line";
@@ -115,12 +115,27 @@ const starterQuestions = [
   { label: "Expenses", question: "Which travel expenses can I reimburse?" },
 ];
 
+const waitingTrivia = [
+  "Demo knowledge fact: the library includes PDF, Word, Excel, PowerPoint, and CSV files.",
+  "Demo document note: hackathon policy files are marked as fictional, non-production content.",
+  "Demo pack fact: sample topics include leave, travel, transport, security, and hybrid work.",
+  "Knowledge-base tip: a specific question helps the agent find the most relevant document section.",
+  "Source note: document links appear when Copilot Studio returns citation metadata.",
+];
+
 const viewPaths: Record<View, string> = {
   ask: "/",
   knowledge: "/knowledge",
   people: "/people",
   admin: "/admin",
 };
+
+function viewFromPathname(pathname: string): View {
+  if (pathname === "/knowledge") return "knowledge";
+  if (pathname === "/people") return "people";
+  if (pathname === "/admin") return "admin";
+  return "ask";
+}
 
 function newId(prefix: string) {
   return `${prefix}-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
@@ -146,9 +161,10 @@ function sourceFileType(source: CopilotCitation): { icon: IconName; label: strin
   return { icon: "file", label: "File", className: "bg-[#E8EDF2] text-[#4C759D]" };
 }
 
-export default function AskRevantageApp({ initialView = "ask" }: { initialView?: View }) {
+export default function AskRevantageApp() {
   const router = useRouter();
-  const [view, setView] = useState<View>(initialView);
+  const pathname = usePathname();
+  const view = viewFromPathname(pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -159,6 +175,8 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
     },
   ]);
   const [loading, setLoading] = useState(false);
+  const [triviaIndex, setTriviaIndex] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [directoryPeople, setDirectoryPeople] = useState<RoutingContact[]>(ROUTING_CONTACTS);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -178,10 +196,6 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
   const directLineRef = useRef<DirectLineSession | null>(null);
 
   useEffect(() => {
-    setView(initialView);
-  }, [initialView]);
-
-  useEffect(() => {
     const savedTheme = localStorage.getItem("ask-revantage.theme") as Theme | null;
     const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const nextTheme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : preferred;
@@ -193,6 +207,23 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
     setAdminPersona(selected);
     sessionStorage.setItem("ask-revantage.admin-persona", selected.name);
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
+
+  useEffect(() => {
+    setTriviaIndex(0);
+    if (!loading || prefersReducedMotion) return;
+    const timer = window.setInterval(() => {
+      setTriviaIndex((current) => (current + 1) % waitingTrivia.length);
+    }, 4_000);
+    return () => window.clearInterval(timer);
+  }, [loading, prefersReducedMotion]);
 
   useEffect(() => {
     try {
@@ -273,9 +304,9 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
   const sessionPersona = view === "admin" ? adminPersona : normalPersona;
 
   function navigate(next: View) {
-    setView(next);
     setMobileOpen(false);
-    router.push(viewPaths[next]);
+    const destination = viewPaths[next];
+    if (pathname !== destination) router.push(destination);
   }
 
   function toggleTheme() {
@@ -289,8 +320,7 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
     const text = (override ?? question).trim();
     if (!text || loading) return;
     setQuestion("");
-    setView("ask");
-    if (view !== "ask") router.push("/");
+    if (pathname !== "/") router.push("/");
     setMessages((current) => [...current, { id: newId("message"), role: "user", text }]);
     setLoading(true);
 
@@ -516,7 +546,7 @@ export default function AskRevantageApp({ initialView = "ask" }: { initialView?:
                     </article>
                   ))}
                   {messages.length === 1 && !loading && <div className="ml-12 flex flex-wrap gap-2" aria-label="Three suggested prompts">{starterQuestions.map((starter) => <button key={starter.question} onClick={() => ask(starter.question)} className="glass-button inline-flex items-center rounded-full px-4 py-2.5 text-left text-xs font-bold text-[#18324D] transition hover:-translate-y-0.5"><span>{starter.question}</span><span className="sr-only">{starter.label}</span></button>)}</div>}
-                  {loading && <div className="flex gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#031730] text-[#CFE4F8]"><Icon name="bot" className="h-4 w-4" /></div><div className="flex items-center gap-1.5 rounded-2xl bg-[#F1F1F1] px-4 py-3" role="status" aria-label="Ask Revant Bot is typing"><span className="thinking-dot"/><span className="thinking-dot"/><span className="thinking-dot"/></div></div>}
+                  {loading && <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#031730] text-[#CFE4F8]"><Icon name="bot" className="h-4 w-4" /></div><div className="min-w-0"><div className="flex w-fit items-center gap-1.5 rounded-2xl bg-[#F1F1F1] px-4 py-3" aria-label="Ask Revant Bot is checking the demo knowledge base"><span className="thinking-dot" aria-hidden="true"/><span className="thinking-dot" aria-hidden="true"/><span className="thinking-dot" aria-hidden="true"/><span className="sr-only">Ask Revant Bot is checking the demo knowledge base.</span></div><p className="mt-2 max-w-xl text-xs leading-5 text-[#667085]"><span className="font-bold text-[#4C759D]">While you wait:</span> {waitingTrivia[triviaIndex]}</p></div></div>}
                   <div ref={endRef} />
                 </div>
 

@@ -19,6 +19,7 @@ export type DirectLineSession = {
   conversationId: string;
   userId: string;
   endpoint: string;
+  streamUrl?: string;
   watermark: string;
   seenActivityIds: Set<string>;
   expiresAt: number;
@@ -30,6 +31,9 @@ type DirectLineActivity = UnknownRecord & {
   type?: string;
   text?: string;
   from?: { id?: string; role?: string };
+  replyToId?: string;
+  timestamp?: string;
+  inputHint?: string;
   entities?: unknown[];
   attachments?: Array<{ contentType?: string; contentUrl?: string; name?: string; content?: unknown }>;
   channelData?: UnknownRecord;
@@ -37,6 +41,8 @@ type DirectLineActivity = UnknownRecord & {
 };
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+const RESPONSE_TIMEOUT_MS = 75_000;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 function record(value: unknown): UnknownRecord | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as UnknownRecord : null;
@@ -137,11 +143,11 @@ function extractSuggestedActions(activity: DirectLineActivity) {
 }
 
 export async function createDirectLineSession(): Promise<DirectLineSession> {
-  const tokenResponse = await fetch("/api/copilot/token", { method: "POST", cache: "no-store" });
+  const tokenResponse = await fetchWithTimeout("/api/copilot/token", { method: "POST", cache: "no-store" });
   const tokenPayload = await tokenResponse.json();
   if (!tokenResponse.ok) throw new Error(tokenPayload.error || "Copilot Studio is not available.");
 
-  const conversationResponse = await fetch(`${tokenPayload.endpoint}/conversations`, {
+  const conversationResponse = await fetchWithTimeout(`${tokenPayload.endpoint}/conversations`, {
     method: "POST",
     headers: { Authorization: `Bearer ${tokenPayload.token}`, "Content-Type": "application/json" },
   });
@@ -153,15 +159,26 @@ export async function createDirectLineSession(): Promise<DirectLineSession> {
     conversationId: conversation.conversationId,
     userId: tokenPayload.userId,
     endpoint: tokenPayload.endpoint,
+    streamUrl: conversation.streamUrl,
     watermark: "",
     seenActivityIds: new Set<string>(),
     expiresAt: Date.now() + Number(conversation.expires_in || tokenPayload.expiresIn || 1800) * 1000,
   };
 }
 
-async function refreshDirectLineToken(session: DirectLineSession) {
-  if (Date.now() <= session.expiresAt - 60_000) return;
-  const response = await fetch(`${session.endpoint}/tokens/refresh`, {
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeout = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeout);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function refreshDirectLineToken(session: DirectLineSession, force = false) {
+  if (!force && Date.now() <= session.expiresAt - 60_000) return;
+  const response = await fetchWithTimeout(`${session.endpoint}/tokens/refresh`, {
     method: "POST",
     headers: { Authorization: `Bearer ${session.token}` },
   });
@@ -171,10 +188,77 @@ async function refreshDirectLineToken(session: DirectLineSession) {
   session.expiresAt = Date.now() + Number(payload.expires_in || 1800) * 1000;
 }
 
+function activityHasContent(activity: DirectLineActivity) {
+  return Boolean(
+    activity.text?.trim()
+    || activity.entities?.length
+    || activity.attachments?.length
+    || activity.suggestedActions?.actions?.length,
+  );
+}
+
+function isAgentMessage(activity: DirectLineActivity, session: DirectLineSession) {
+  if (activity.type !== "message" || !activityHasContent(activity)) return false;
+  if (activity.from?.id === session.userId || activity.from?.role === "user") return false;
+  return true;
+}
+
+function belongsToCurrentTurn(activity: DirectLineActivity, sentActivityId: string, sentAt: number) {
+  if (activity.replyToId === sentActivityId) return true;
+  const timestamp = activity.timestamp ? Date.parse(activity.timestamp) : Number.NaN;
+  if (Number.isFinite(timestamp)) return timestamp >= sentAt - 1_000;
+  return !activity.replyToId;
+}
+
+async function getActivities(session: DirectLineSession) {
+  const suffix = session.watermark ? `?watermark=${encodeURIComponent(session.watermark)}` : "";
+  let response = await fetchWithTimeout(
+    `${session.endpoint}/conversations/${encodeURIComponent(session.conversationId)}/activities${suffix}`,
+    { headers: { Authorization: `Bearer ${session.token}` }, cache: "no-store" },
+  );
+
+  if (response.status === 401) {
+    await refreshDirectLineToken(session, true);
+    response = await fetchWithTimeout(
+      `${session.endpoint}/conversations/${encodeURIComponent(session.conversationId)}/activities${suffix}`,
+      { headers: { Authorization: `Bearer ${session.token}` }, cache: "no-store" },
+    );
+  }
+
+  if (response.status === 403) {
+    throw new Error("The Copilot Studio agent did not allow this conversation. Check the agent authentication and channel access settings.");
+  }
+  if (response.status === 404 || response.status === 410) {
+    throw new Error("The Copilot conversation expired. Please send the question again.");
+  }
+  if (!response.ok) {
+    if (response.status === 429 || response.status >= 500) return [] as DirectLineActivity[];
+    throw new Error("Ask Revant Bot could not read the Copilot Studio response.");
+  }
+
+  const payload = await response.json();
+  if (payload.watermark !== undefined && payload.watermark !== null) session.watermark = String(payload.watermark);
+  return Array.isArray(payload.activities) ? payload.activities as DirectLineActivity[] : [];
+}
+
+async function drainExistingActivities(session: DirectLineSession) {
+  try {
+    const activities = await getActivities(session);
+    for (const activity of activities) {
+      if (activity.id) session.seenActivityIds.add(activity.id);
+    }
+  } catch {
+    // A first read can race with conversation setup. Timestamps and activity IDs
+    // still prevent stale welcome messages from becoming the next answer.
+  }
+}
+
 export async function sendToCopilot(session: DirectLineSession, text: string): Promise<CopilotReply> {
   await refreshDirectLineToken(session);
+  await drainExistingActivities(session);
 
-  const sendResponse = await fetch(`${session.endpoint}/conversations/${encodeURIComponent(session.conversationId)}/activities`, {
+  const sentAt = Date.now();
+  const sendResponse = await fetchWithTimeout(`${session.endpoint}/conversations/${encodeURIComponent(session.conversationId)}/activities`, {
     method: "POST",
     headers: { Authorization: `Bearer ${session.token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -186,36 +270,47 @@ export async function sendToCopilot(session: DirectLineSession, text: string): P
     }),
   });
   if (!sendResponse.ok) throw new Error("The question could not be sent to Copilot Studio.");
+  const sent = await sendResponse.json();
+  const sentActivityId = typeof sent.id === "string" ? sent.id : "";
 
   const received: DirectLineActivity[] = [];
-  let quietPolls = 0;
-  for (let attempt = 0; attempt < 28; attempt += 1) {
-    await wait(attempt === 0 ? 450 : 650);
-    const suffix = session.watermark ? `?watermark=${encodeURIComponent(session.watermark)}` : "";
-    const response = await fetch(`${session.endpoint}/conversations/${encodeURIComponent(session.conversationId)}/activities${suffix}`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-      cache: "no-store",
-    });
-    if (!response.ok) continue;
-    const payload = await response.json();
-    session.watermark = payload.watermark || session.watermark;
-    const fresh = ((payload.activities || []) as DirectLineActivity[]).filter((activity) => {
-      if (!activity.id || session.seenActivityIds.has(activity.id)) return false;
+  const deadline = sentAt + RESPONSE_TIMEOUT_MS;
+  let lastAnswerAt = 0;
+  let finalSignalAt = 0;
+  let firstPoll = true;
+
+  while (Date.now() < deadline) {
+    await wait(firstPoll ? 450 : 900);
+    firstPoll = false;
+
+    let activities: DirectLineActivity[] = [];
+    try {
+      activities = await getActivities(session);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") continue;
+      throw error;
+    }
+
+    for (const activity of activities) {
+      if (!activity.id || session.seenActivityIds.has(activity.id)) continue;
       session.seenActivityIds.add(activity.id);
-      return activity.from?.role === "bot" && activity.type === "message";
-    });
-    if (fresh.length) {
-      received.push(...fresh);
-      quietPolls = 0;
-    } else if (received.length) {
-      quietPolls += 1;
-      if (quietPolls >= 2) break;
+      if (!isAgentMessage(activity, session) || !belongsToCurrentTurn(activity, sentActivityId, sentAt)) continue;
+      received.push(activity);
+      if (activity.text?.trim()) lastAnswerAt = Date.now();
+      if (activity.inputHint === "acceptingInput") finalSignalAt = Date.now();
+    }
+
+    if (lastAnswerAt) {
+      const quietFor = Date.now() - lastAnswerAt;
+      if ((finalSignalAt && quietFor >= 750) || quietFor >= 2_700) break;
     }
   }
 
   const meaningful = received.filter((activity) => activity.text?.trim());
   const answer = meaningful.at(-1);
-  if (!answer?.text) throw new Error("Copilot Studio did not return an answer in time.");
+  if (!answer?.text) {
+    throw new Error("Ask Revant Bot is taking longer than expected. No completed answer was received within 75 seconds. Please try again.");
+  }
 
   const citations = received.flatMap(extractCitations);
   const unique = new Map<string, CopilotCitation>();
@@ -224,7 +319,7 @@ export async function sendToCopilot(session: DirectLineSession, text: string): P
   return {
     text: answer.text.trim(),
     citations: [...unique.values()],
-    suggestedActions: extractSuggestedActions(answer),
+    suggestedActions: extractSuggestedActions([...received].reverse().find((activity) => activity.suggestedActions?.actions?.length) || answer),
   };
 }
 
