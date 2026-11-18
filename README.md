@@ -16,7 +16,7 @@ Ask Revantage is a responsive internal knowledge-assistant demonstration built w
 - People Directory email actions use `mailto:` and never open Teams.
 - Local JPG/PNG profile assets, including Shruti Gupta and Ethan Brooks.
 - Light and dark themes, responsive navigation, reduced-motion support, keyboard focus states, Open Graph metadata, favicon, and link-preview image.
-- Canonical route-group structure with cleanup for obsolete duplicate top-level routes.
+- Canonical route-group structure with cleanup for obsolete duplicate routes and superseded legacy modules.
 - Patched Next.js 16.4.5 and complete PostCSS dependency configuration.
 
 ## Local and Codespaces setup
@@ -62,7 +62,7 @@ PEOPLE_DIRECTORY_API_TOKEN=
    npm run verify
    ```
 
-3. Commit all changes, including removals of obsolete routes:
+3. Commit all changes, including removals of obsolete routes and modules:
 
    ```bash
    git add -A
@@ -74,6 +74,8 @@ PEOPLE_DIRECTORY_API_TOKEN=
 5. Redeploy after changing environment variables.
 
 The previous PostCSS failure is fixed because `postcss.config.mjs` and `package.json` now agree: `@tailwindcss/postcss` is explicitly installed as a development dependency. The interface uses authored CSS, but keeping the plugin dependency resolves the existing build configuration without a risky build-only workaround.
+
+The pre-typecheck and prebuild cleanup also removes files left behind by older ZIP releases. Those legacy files imported `SupportRequest`, `KnowledgeSource`, `AdminIcon`, and `ChatIcon`, and included an untyped CommonJS classifier. The current application no longer uses that request/store/workspace-shell stack, so deleting those stale files is safer than restoring incompatible compatibility types.
 
 ## Current hackathon architecture
 

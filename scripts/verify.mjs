@@ -13,6 +13,25 @@ const required = [
   "public/assets/shruti-gupta-avatar.jpg",
 ];
 await Promise.all(required.map((path) => access(path)));
+
+const obsolete = [
+  "app/api/requests",
+  "app/api/sources",
+  "components/workspace-shell.tsx",
+  "lib/direct-line-client.ts",
+  "lib/direct-line-classifier.js",
+  "lib/direct-line-classifier.d.ts",
+  "lib/store.ts",
+];
+await Promise.all(obsolete.map(async (path) => {
+  try {
+    await access(path);
+    throw new Error(`Obsolete source remains: ${path}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Obsolete source remains:")) throw error;
+  }
+}));
+
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (!pkg.devDependencies?.["@tailwindcss/postcss"]) throw new Error("@tailwindcss/postcss is missing");
 const all = await Promise.all([

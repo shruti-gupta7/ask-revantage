@@ -1,6 +1,22 @@
 import { rm } from "node:fs/promises";
 
-// Older ZIPs created top-level pages that collide with the canonical route group.
-for (const path of ["app/admin", "app/knowledge", "app/people", "app/page.tsx"]) {
+// Root-ready ZIPs overwrite files but cannot delete files left by older releases.
+// Remove routes and modules that were replaced by the canonical workspace shell,
+// Direct Line client, and source storage implementation.
+const obsoletePaths = [
+  "app/admin",
+  "app/knowledge",
+  "app/people",
+  "app/page.tsx",
+  "app/api/requests",
+  "app/api/sources",
+  "components/workspace-shell.tsx",
+  "lib/direct-line-client.ts",
+  "lib/direct-line-classifier.js",
+  "lib/direct-line-classifier.d.ts",
+  "lib/store.ts",
+];
+
+for (const path of obsoletePaths) {
   await rm(path, { recursive: true, force: true });
 }
