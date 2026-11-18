@@ -368,3 +368,113 @@ body {
     filter: none;
   }
 }
+
+
+/* Persistent dark theme */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 8% 10%, rgba(76, 117, 157, 0.28), transparent 28rem),
+    radial-gradient(circle at 91% 12%, rgba(142, 105, 91, 0.22), transparent 25rem),
+    radial-gradient(circle at 74% 88%, rgba(24, 50, 77, 0.5), transparent 30rem),
+    linear-gradient(145deg, #020d1c 0%, #071b30 52%, #111d2a 100%);
+  color: #f7f8fa;
+}
+
+:root[data-theme="dark"] .app-shell {
+  color: #f7f8fa;
+}
+
+:root[data-theme="dark"] .glass-panel,
+:root[data-theme="dark"] .glass-card,
+:root[data-theme="dark"] .glass-header,
+:root[data-theme="dark"] .glass-nav,
+:root[data-theme="dark"] .glass-sidebar,
+:root[data-theme="dark"] .glass-inset,
+:root[data-theme="dark"] .glass-input,
+:root[data-theme="dark"] .glass-button,
+:root[data-theme="dark"] .glass-composer,
+:root[data-theme="dark"] .glass-warm {
+  background: rgba(13, 33, 54, 0.72);
+  border-color: rgba(207, 228, 248, 0.17);
+  color: #f7f8fa;
+  box-shadow:
+    0 12px 38px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] .glass-nav,
+:root[data-theme="dark"] .glass-sidebar {
+  background: rgba(3, 23, 48, 0.86);
+}
+
+:root[data-theme="dark"] .glass-dark {
+  background: linear-gradient(145deg, rgba(24, 50, 77, 0.96), rgba(3, 23, 48, 0.96));
+}
+
+:root[data-theme="dark"] .glass-divider {
+  border-color: rgba(207, 228, 248, 0.14);
+  background: rgba(3, 23, 48, 0.26);
+}
+
+:root[data-theme="dark"] .glass-panel h1,
+:root[data-theme="dark"] .glass-panel h2,
+:root[data-theme="dark"] .glass-panel h3,
+:root[data-theme="dark"] .glass-card h1,
+:root[data-theme="dark"] .glass-card h2,
+:root[data-theme="dark"] .glass-card h3,
+:root[data-theme="dark"] .glass-header h1,
+:root[data-theme="dark"] .glass-inset h3,
+:root[data-theme="dark"] .glass-sidebar p,
+:root[data-theme="dark"] .glass-button {
+  color: #f7f8fa;
+}
+
+:root[data-theme="dark"] .glass-panel p,
+:root[data-theme="dark"] .glass-card p,
+:root[data-theme="dark"] .glass-header p,
+:root[data-theme="dark"] .glass-inset p,
+:root[data-theme="dark"] .glass-warm p,
+:root[data-theme="dark"] .glass-sidebar .text-\[\#667085\] {
+  color: #c7d2df;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  color: #f7f8fa;
+  background-color: rgba(3, 23, 48, 0.58);
+  border-color: rgba(207, 228, 248, 0.2);
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #9fb0c2;
+}
+
+:root[data-theme="dark"] .chat-scroll {
+  background: radial-gradient(circle at top right, rgba(76, 117, 157, 0.18), transparent 30%);
+}
+
+:root[data-theme="dark"] .app-shell::before {
+  background: linear-gradient(145deg, rgba(76, 117, 157, 0.08), rgba(24, 50, 77, 0.16));
+  border-color: rgba(207, 228, 248, 0.1);
+}
+
+:root[data-theme="dark"] .glass-nav button,
+:root[data-theme="dark"] .glass-sidebar button {
+  color: #dbe7f4;
+}
+
+:root[data-theme="dark"] .glass-sidebar button[class*="bg-[#031730]"] {
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .glass-warm h3,
+:root[data-theme="dark"] .glass-warm strong {
+  color: #f7f8fa;
+}

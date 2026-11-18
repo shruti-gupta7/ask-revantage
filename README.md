@@ -2,91 +2,129 @@
 
 **One question. One place. One answer.**
 
-Ask Revantage is a Next.js employee knowledge experience for finding workplace information, checking the source, and reaching the right support route when an answer is not available. The current build includes a searchable policy library, policy-grounded responses, local request tracking, named routing contacts with local avatars, and a server-side connection point for a Microsoft Copilot Studio agent.
+Ask Revantage is a custom Next.js employee-help experience connected to a published Microsoft Copilot Studio agent. The assistant identity is **Ask Revant Bot**. Copilot Studio produces the answers and citation metadata; the repository contains no hardcoded policy answers.
 
-## What is included
+## Current experience
 
-- Premium Revantage-aligned interface using Navy, Bronze, Light Blue, Medium Blue, Tan, and Light Gray
-- Accessible glassmorphism surface system with layered translucency, 20px backdrop blur, refraction edges, and solid-color fallbacks
-- Tasteful staged reveal animations with automatic reduced-motion support
-- Ask Revantage logo stored in `public/assets/ask-revantage-logo.jpeg`
-- Route-specific metadata for the home, knowledge, support, and admin pages, including canonical links and Open Graph/Twitter cards
-- Generated favicon, Apple touch icon, web app manifest, and branded Open Graph image
-- Five sample policy documents covering:
-  - People and leave
-  - Cab and late-night transport
-  - Travel and expenses
-  - IT access and security
-  - Workplace and facilities
-- Policy matching with source title, section, version, and document link
-- Exactly three suggested prompt pills on the homepage
-- Supporting source-document card inside each policy answer, with open-in-new-tab and download actions
-- Named support routes and illustrated picture avatars
-- Request creation and browser-based request history
-- Knowledge, routing, and admin views
-- Admin data-source workspace with no seeded source or policy records
-- Add, check, pause, enable, and remove configured SharePoint, OneDrive, website, API, or file connections
-- Dynamic server-side Copilot Studio configuration status, without exposing credentials
-- Optional `DATA_SOURCE_API_URL` proxy for server-managed connector records; browser workspace storage is used when it is not configured
-- Microsoft Copilot Studio integration through Direct Line, with a policy-library fallback
-- Responsive design for desktop, tablet, and mobile
+- Custom glassmorphism UI with persistent light and dark themes
+- Exactly three suggested prompt pills inside the chat window and no separate prompt panel
+- Bot icon throughout the chat—no sparkle icon
+- Real Copilot Studio answers and citation metadata
+- Source cards with clear file-type icons and concise **Open** and **Download** actions when a valid URL is returned
+- Classy Knowledge Library titled **Ask Revantage - Hackathon Knowledge Base**
+- Searchable **People Directory** with fictional hackathon profiles and Microsoft Teams chat links
+- Human escalation for unsupported questions
+- Dynamic **Admin Dashboard** with no seeded source or policy records
+- Responsive navigation, chat, Knowledge Library, People Directory, and Admin Dashboard
+- Dedicated metadata, favicon, manifest, 1200×630 Open Graph image, and Twitter preview image
+- Local Shruti Gupta avatar at `public/assets/avatars/shruti-gupta.jpg`; fictional admins use separate illustrated avatars
 
-## Application routes and metadata
+## Current hackathon implementation
 
-Each main experience has a real Next.js route and dedicated metadata:
-
-| Route | Page | Metadata purpose |
-|---|---|---|
-| `/` | Ask Revantage | Employee policy assistant and trusted-answer experience |
-| `/knowledge` | Knowledge library | Available policy sources and approved answer sections |
-| `/support` | Support routes | Named department contacts and escalation experience |
-| `/admin` | Admin overview | Knowledge coverage, AI readiness, and routed requests |
-
-Set `NEXT_PUBLIC_SITE_URL` in Vercel to the production domain so canonical and social metadata resolve to the final deployment URL.
-
-## Microsoft and development tools
-
-This hackathon solution was shaped with Microsoft Copilot for research, planning, content refinement, and coding support. The conversational integration is designed for Microsoft Copilot Studio. The production direction can use Microsoft 365 sources such as SharePoint, OneDrive, Excel, and approved document libraries. GitHub provides source control, GitHub Codespaces supports browser-based development, and Vercel builds and hosts the Next.js application.
-
-## Run locally or in GitHub Codespaces
-
-Requirements: Node.js 20.9 or later.
-
-```bash
-npm install
-npm run dev
+```mermaid
+flowchart LR
+    U[User browser] --> UI[Ask Revantage Next.js UI<br/>Vercel]
+    UI --> CS[Published Copilot Studio agent]
+    CS --> KB[Directly uploaded fictional documents<br/>Copilot Studio / Dataverse]
+    KB --> CS
+    CS --> R[Grounded answer + source metadata]
+    R --> UI
+    UI --> U
+    UI -. simulated/configurable .-> AD[Admin Dashboard<br/>source metadata management]
+    UI -. fictional demo data .-> PD[People Directory<br/>Teams deep links]
 ```
 
-Open `http://localhost:3000`.
+- The live hackathon chat uses a secured Direct Line token exchange and the published Copilot Studio agent.
+- Knowledge documents are fictional and uploaded directly to Copilot Studio; they are not bundled policy answers in this repository.
+- Source cards are generated from citation metadata returned by the agent.
+- Admin source additions are simulated in browser storage unless `DATA_SOURCE_API_URL` is configured.
+- People Directory profiles and UPNs are fictional. Teams deep links demonstrate the intended handoff pattern.
 
-For a production check:
+## Production / actual-user architecture
 
-```bash
-npm run typecheck
-npm run build
-npm start
+```mermaid
+flowchart LR
+    E[Employee] --> ID[Microsoft Entra ID<br/>authentication]
+    ID --> APP[Ask Revantage<br/>Next.js application]
+    APP --> AG[Copilot Studio / Agents]
+    AG --> SP[Permission-aware SharePoint<br/>and OneDrive]
+    AG --> SYS[Other approved enterprise systems]
+    SP --> AG
+    SYS --> AG
+    AG --> GR[Grounded answer + citations]
+    GR --> APP
+    APP --> E
+    APP -->|unsupported question| TM[Microsoft Teams<br/>human escalation]
 ```
 
-## Connect the Copilot Studio agent
+- Microsoft Entra ID would establish the employee identity and application session.
+- Copilot Studio/Agents would retrieve only knowledge the employee is authorized to access.
+- SharePoint, OneDrive, and other approved systems would remain permission-aware sources rather than public repository content.
+- Grounded responses would retain source citations and audit-friendly metadata.
+- Unsupported questions would move to approved people or queues through Microsoft Teams.
 
-The app answers known policy questions from the local document library first. Questions without a confident match are sent to Copilot Studio when a server-side connection is configured. If the agent is unavailable, the app shows the best human support route.
+## Tools used to build Ask Revantage
 
-For a matched policy answer, the chat response includes the supporting document title, matching section, category, version, owner, effective date, and summary. Users can open the source in a new browser tab or download the document directly from the response.
+| Tool | How it was used |
+|---|---|
+| Microsoft Copilot | Research, planning, requirements refinement, content drafting, and AI-assisted development. Human review and verification remained part of the workflow. |
+| Microsoft Copilot Studio | Published conversational agent, directly uploaded fictional knowledge, grounded answers, and citation metadata. |
+| Direct Line API | Secure conversation channel between the custom browser UI and Copilot Studio; the server exchanges the secret for a short-lived conversation token. |
+| GitHub | Public source control and hackathon submission repository. |
+| GitHub Codespaces | Browser-based development, dependency installation, type checking, and build verification where local tools are restricted. |
+| Next.js + TypeScript | Application framework, route metadata, server endpoints, secure token exchange, and typed client behavior. |
+| Tailwind CSS | Responsive layout, component styling, accessibility states, and the custom glassmorphism interface. |
+| Vercel | Next.js build, hosting, serverless API routes, and protected environment variables. |
+| OneDrive / SharePoint patterns | Production-ready, permission-aware source patterns and dynamic document-link targets; not used for end-user retrieval in the current direct-upload hackathon flow. |
+| Microsoft Teams | Human-escalation target through deep links; current directory identities are fictional demonstration data. |
+| Python / Pillow | Local preparation of favicon and social-preview image assets; not required by the production runtime. |
+| Hype4 glassmorphism reference | Visual reference for blur, refraction edges, translucency, and depth treatment. |
 
-1. Publish the agent in Microsoft Copilot Studio.
-2. Open **Channels** and configure the **Mobile app** or Direct Line channel.
-3. Copy the token endpoint or Direct Line secret.
-4. In Vercel, open **Project settings → Environment Variables**.
-5. Add one of the following:
+### AI-assisted development disclosure
+
+Ask Revantage was developed with Microsoft Copilot assistance for research, design iteration, code generation, debugging, and documentation. The implementation was reviewed and tested against the stated hackathon requirements. AI assistance is disclosed here transparently; it does not replace security review, accessibility review, data-governance approval, or production engineering controls.
+
+## Secure Copilot Studio integration
 
 ```text
-COPILOT_STUDIO_TOKEN_ENDPOINT=<token endpoint from Copilot Studio>
+Browser
+  │ POST /api/copilot/token
+  ▼
+Next.js server on Vercel
+  │ Uses COPILOT_STUDIO_DIRECT_LINE_SECRET
+  │ Exchanges secret at /v3/directline/tokens/generate
+  ▼
+Short-lived, single-conversation token
+  │
+  ▼
+Browser Direct Line conversation
+  │
+  ▼
+Published Copilot Studio agent
+  └─ Real answer activities + schema.org citation metadata
 ```
 
-or
+The Direct Line secret never enters browser code or an API response. The browser receives only a short-lived conversation token. The token request binds an unguessable `dl_` user ID and trusted origins derived from `NEXT_PUBLIC_SITE_URL` and the current request origin.
+
+The custom client keeps one conversation until **New conversation** is selected, refreshes the token before expiry, filters activities with `from.role === "bot"`, deduplicates activities, renders real agent text, normalizes citations, and surfaces human escalation when the answer is outside the agent's knowledge.
+
+## Required Copilot Studio settings
+
+1. Keep the hackathon documents uploaded directly to the agent and marked **Ready**.
+2. Publish the latest agent version.
+3. Under **Settings → Security → Web channel security**, turn on **Require secured access**.
+4. Copy either Web channel security secret.
+5. Confirm generative answers return source citations.
+
+OneDrive end-user authentication is not required for answer retrieval because Copilot Studio retrieves the directly uploaded knowledge.
+
+## Required Vercel settings
+
+Set these for Production and any Preview environment used for testing:
 
 ```text
-COPILOT_STUDIO_DIRECT_LINE_SECRET=<server-side secret>
+COPILOT_STUDIO_DIRECT_LINE_SECRET=<Copilot Studio Web channel security secret>
+NEXT_PUBLIC_SITE_URL=https://your-production-domain.vercel.app
 ```
 
 Optional:
@@ -95,47 +133,88 @@ Optional:
 COPILOT_STUDIO_DIRECT_LINE_BASE_URL=https://directline.botframework.com
 ```
 
-6. Redeploy the latest commit.
+Redeploy after changing variables. Never expose the Direct Line secret through `NEXT_PUBLIC_`, and never commit it to GitHub.
 
-Never place the Direct Line secret in a variable prefixed with `NEXT_PUBLIC_`, and never commit credentials to GitHub.
+## Knowledge Library and OneDrive document URLs
 
-## Configure admin data-source management
+The library name is **Ask Revantage - Hackathon Knowledge Base**. The UI contains no embedded document records. It builds the library from citation metadata returned during the current Copilot conversation.
 
-The admin panel starts with no data-source records. Administrators can add and manage connection metadata in the interface. Without a backend service, those records are stored in the current browser workspace so the full add/check/pause/enable/remove flow can be demonstrated safely.
+The UI detects folder, PDF, Word/DOCX, Excel/XLSX, PowerPoint/PPTX, and generic file types. **Open** and **Download** appear only for valid HTTP or HTTPS URLs.
 
-To load and manage records from a production service instead, set:
+For production OneDrive-backed content, supply document URLs dynamically through approved Copilot citation metadata or a server-side integration. Use organization-scoped OneDrive/SharePoint sharing links or approved `webUrl` values that the signed-in user can open. Do not place confidential URLs, item IDs, access tokens, or document contents in source code. Cross-origin host security and content-disposition settings determine whether **Download** saves immediately or opens the source first.
+
+## People Directory and Teams targets
+
+All built-in profiles and UPNs are fictional hackathon data. Teams actions use:
 
 ```text
-DATA_SOURCE_API_URL=https://your-source-management-service.example/api/sources
+https://teams.microsoft.com/l/chat/0/0?users=<encoded-UPN>
+```
+
+If a profile has no `teamsUpn`, the action is disabled with an accessible fallback.
+
+For production, provide people dynamically from an approved server-side service:
+
+```text
+PEOPLE_DIRECTORY_API_URL=https://your-approved-service.example/api/people
+PEOPLE_DIRECTORY_API_TOKEN=<optional server-side bearer token>
+```
+
+The service can return an array or `{ "people": [...] }` containing `id`, `name`, `title`, `department`, `location`, `expertise`, `categories`, `response`, `avatar`, and optional `teamsUpn`. Do not commit real employee lists, confidential UPN exports, or tokens to this public repository.
+
+## Admin Dashboard
+
+The Admin Dashboard starts with no source records. It reports Copilot Studio status from server configuration and offers production-aligned connector choices:
+
+- Copilot Studio agent/direct-upload knowledge
+- Microsoft SharePoint and Microsoft OneDrive
+- PDF/file upload, Word, Excel, and PowerPoint
+- Website/URL
+
+In browser-only hackathon mode, adding a source stores metadata locally and labels it **Prototype configured**. It does not claim to authenticate, upload, index, or sync the source. For a real management service, configure:
+
+```text
+DATA_SOURCE_API_URL=https://your-service.example/api/sources
 DATA_SOURCE_STORE=Server-managed
 ```
 
-When configured, the Next.js server proxies `GET`, `POST`, `PATCH`, and `DELETE` requests through `/api/admin/sources`. The external service should return either a source array or an object with a `sources` array. Credentials for SharePoint, OneDrive, Microsoft Graph, or other connectors should remain in that service or a managed secret store—not in the browser or repository.
+The server then proxies `GET`, `POST`, `PATCH`, and `DELETE` through `/api/admin/sources`. Credentials belong in the server service or managed secret store.
 
-## Policy content
+## Session personas
 
-The documents in `public/documents/` contain hackathon sample content and do not represent official Revantage policy. The connector types and workflow are designed to demonstrate how approved SharePoint, OneDrive, Excel, and document-library sources can be added later.
+- Normal experience: **Shruti Gupta** with the supplied local photo, including alongside user messages.
+- Admin Dashboard: a separate fictional admin selected once per browser session, with role **Admin user** and a different avatar.
 
-To add a policy:
+The Admin Dashboard never uses Shruti Gupta's photo for the fictional admin persona.
 
-1. Add the source document under `public/documents/`.
-2. Add its metadata and approved answer sections to `data/knowledge.ts`.
-3. Confirm the relevant keywords and support route.
-4. Run the build and test at least one matched and one unmatched question.
+## Routes and metadata
 
-## Repository update workflow
+| Route | Purpose |
+|---|---|
+| `/` | Ask Revant Bot chat |
+| `/knowledge` | Dynamic Knowledge Library from live citations |
+| `/people` | Fictional People Directory and Teams actions |
+| `/admin` | Dynamic Admin Dashboard |
 
-When local developer tools are restricted:
+Each route has dedicated metadata. The branded preview image is `public/og/ask-revantage.png` and is also exposed through `app/opengraph-image.png`.
 
-1. Download the updated project ZIP.
-2. Open the GitHub repository in Codespaces.
-3. Upload the project contents at the repository root so `app/`, `data/`, `public/`, and `package.json` are siblings.
-4. Run `npm install`, `npm run typecheck`, and `npm run build`.
-5. Commit and push to `main`.
-6. Let Vercel deploy the new commit automatically.
+## Run and deploy
+
+```bash
+npm install
+npm run typecheck
+npm run build
+npm run dev
+```
+
+```bash
+git add .
+git commit -m "Connect Ask Revant Bot and refine knowledge, people, and admin UX"
+git push origin main
+```
+
+Vercel should deploy automatically. Test both themes, all three prompts, cited answers and source actions, unsupported-question escalation, People Directory search and Teams links, mobile navigation, and Admin Dashboard source simulation.
 
 ## Brand implementation
 
-The interface uses Georgia for display headings and Arial for body/UI copy because the licensed Genath and Untitled Sans font files are not included in the repository. The supplied logo is used without recoloring or stretching.
-
-The visual system takes implementation cues from the Hype4 Glassmorphism Generator: translucent surfaces, a 20px backdrop blur, bright refraction edges, restrained depth shadows, and layered branded backgrounds. Readability remains the priority, so content surfaces use high-opacity white or Navy treatments, focus states remain visible, browsers without backdrop-filter support receive solid fallbacks, and reveal animations are disabled when a user prefers reduced motion.
+The supplied logo is preserved. The application uses approved Revantage colors and Georgia/Arial fallbacks. Glass surfaces use 20px backdrop blur, refraction edges, accessible focus states, reduced-motion handling, and solid fallbacks where backdrop filters are unavailable.

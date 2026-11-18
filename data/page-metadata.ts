@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export type AppView = "ask" | "knowledge" | "routes" | "admin";
+export type AppView = "ask" | "knowledge" | "people" | "admin";
 
 const pageMetadata: Record<AppView, { title: string; description: string; path: string }> = {
   ask: {
@@ -10,16 +10,16 @@ const pageMetadata: Record<AppView, { title: string; description: string; path: 
   },
   knowledge: {
     title: "Knowledge Library | Ask Revantage",
-    description: "Explore the workplace policy documents and approved answer sections available to Ask Revantage.",
+    description: "Browse live document citations from Ask Revantage - Hackathon Knowledge Base with clear file types and document actions.",
     path: "/knowledge",
   },
-  routes: {
-    title: "Support Routes | Ask Revantage",
-    description: "Meet the named department contacts who receive questions when an answer needs human support.",
-    path: "/support",
+  people: {
+    title: "People Directory | Ask Revantage",
+    description: "Search fictional hackathon contacts by department, location, or expertise and open Microsoft Teams chat targets when available.",
+    path: "/people",
   },
   admin: {
-    title: "Admin Overview | Ask Revantage",
+    title: "Admin Dashboard | Ask Revantage",
     description: "Configure dynamic data sources, review Copilot Studio connection readiness, and manage knowledge integrations without seeded admin records.",
     path: "/admin",
   },
