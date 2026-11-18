@@ -1,8 +1,9 @@
-import AskRevantageApp from "@/components/ask-revantage-app";
-import { metadataFor } from "@/data/page-metadata";
+import { redirect } from "next/navigation";
 
-export const metadata = metadataFor("routes");
-
-export default function SupportPage() {
-  return <AskRevantageApp initialView="routes" />;
+/**
+ * Backward-compatible route for repositories that previously linked to
+ * /support. The active destination is now the People Directory.
+ */
+export default function LegacySupportPage() {
+  redirect("/people");
 }
