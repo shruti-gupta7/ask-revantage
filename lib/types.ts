@@ -20,6 +20,8 @@ export type ChatMessage = {
 export type DirectLineSession = {
   token: string;
   conversationId: string;
+  userId: string;
   expiresAt: number;
+  streamUrl?: string;
   watermark?: string;
 };

@@ -1,14 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { BotIcon, DownloadIcon, OpenIcon, SendIcon } from "@/components/icons";
-import { askCopilot, createDirectLineSession } from "@/lib/directline";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
+import { BotIcon, DownloadIcon, OpenIcon, RefreshIcon, SendIcon } from "@/components/icons";
+import { askCopilot, createDirectLineSession, isRecoverableDirectLineError } from "@/lib/directline";
 import { storeSources } from "@/lib/source-storage";
 import type { ChatMessage, DirectLineSession } from "@/lib/types";
 
 const MESSAGE_KEY = "ask-revantage-chat-v4";
-const SESSION_KEY = "ask-revantage-directline-v4";
+const SESSION_KEY = "ask-revantage-directline-v5";
+const LEGACY_SESSION_KEYS = ["ask-revantage-directline-v4", "ask-revantage-directline-v3", "ask-revantage-directline-v2"];
 const USER_KEY = "ask-revantage-user-v1";
 const prompts = [
   "What is the late-night cab policy?",
@@ -36,10 +38,29 @@ function loadMessages() {
   } catch { return [welcome]; }
 }
 
-function userId() {
+function browserUserId() {
   let value = localStorage.getItem(USER_KEY);
   if (!value) { value = crypto.randomUUID(); localStorage.setItem(USER_KEY, value); }
   return value;
+}
+
+function validSession(value: unknown): value is DirectLineSession {
+  if (!value || typeof value !== "object") return false;
+  const session = value as Partial<DirectLineSession>;
+  return Boolean(
+    session.token && session.conversationId && session.userId &&
+    typeof session.expiresAt === "number" && Number.isFinite(session.expiresAt) &&
+    session.expiresAt > Date.now() + 30_000,
+  );
+}
+
+function clearPersistedSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+  LEGACY_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
+}
+
+function persistSession(session: DirectLineSession) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 function SourceActions({ sources }: { sources: NonNullable<ChatMessage["sources"]> }) {
@@ -64,14 +85,19 @@ export function ChatView() {
   const [hydrated, setHydrated] = useState(false);
   const sessionRef = useRef<DirectLineSession | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMessages(loadMessages());
+    LEGACY_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
     try {
-      const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null") as DirectLineSession | null;
-      if (session?.token && session.expiresAt > Date.now() + 60_000) sessionRef.current = session;
-    } catch { sessionRef.current = null; }
+      const stored = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null") as unknown;
+      if (validSession(stored)) sessionRef.current = stored;
+      else clearPersistedSession();
+    } catch {
+      clearPersistedSession();
+      sessionRef.current = null;
+    }
     setHydrated(true);
   }, []);
 
@@ -91,6 +117,23 @@ export function ChatView() {
 
   const availablePrompts = useMemo(() => messages.length <= 1 ? prompts : [], [messages.length]);
 
+  async function startSession() {
+    const session = await createDirectLineSession(browserUserId());
+    sessionRef.current = session;
+    persistSession(session);
+    return session;
+  }
+
+  function resetConversation() {
+    abortRef.current?.abort();
+    sessionRef.current = null;
+    clearPersistedSession();
+    sessionStorage.removeItem(MESSAGE_KEY);
+    setMessages([welcome]);
+    setInput("");
+    setWaiting(false);
+  }
+
   async function submitQuestion(question: string) {
     const value = question.trim();
     if (!value || waiting) return;
@@ -102,22 +145,42 @@ export function ChatView() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const id = userId();
       let session = sessionRef.current;
-      if (!session || session.expiresAt <= Date.now() + 60_000) session = await createDirectLineSession(id);
-      sessionRef.current = session;
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      const answer = await askCopilot(session, id, value, controller.signal);
+      if (!session || !validSession(session)) {
+        sessionRef.current = null;
+        clearPersistedSession();
+        session = await startSession();
+      }
+
+      let answer;
+      try {
+        answer = await askCopilot(session, value, controller.signal);
+      } catch (error) {
+        if (!isRecoverableDirectLineError(error) || controller.signal.aborted) throw error;
+        // The token and conversation ID are one pair. Never attach a newly generated
+        // token to a stale conversation ID: remove the whole persisted session and restart.
+        sessionRef.current = null;
+        clearPersistedSession();
+        session = await startSession();
+        answer = await askCopilot(session, value, controller.signal);
+      }
+
       sessionRef.current = answer.session;
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(answer.session));
+      persistSession(answer.session);
       storeSources(answer.sources);
       setMessages((current) => [...current, {
         id: crypto.randomUUID(), role: "assistant", text: answer.text, sources: answer.sources, createdAt: new Date().toISOString(),
       }]);
     } catch (error) {
-      if ((error as Error).name !== "AbortError") setMessages((current) => [...current, {
-        id: crypto.randomUUID(), role: "assistant", text: (error as Error).message || "I could not complete that request. Please try again.", createdAt: new Date().toISOString(),
-      }]);
+      if ((error as Error).name !== "AbortError") {
+        if (isRecoverableDirectLineError(error)) {
+          sessionRef.current = null;
+          clearPersistedSession();
+        }
+        setMessages((current) => [...current, {
+          id: crypto.randomUUID(), role: "assistant", text: (error as Error).message || "I could not complete that request. Please try again.", createdAt: new Date().toISOString(),
+        }]);
+      }
     } finally {
       setWaiting(false);
       abortRef.current = null;
@@ -130,7 +193,8 @@ export function ChatView() {
     <div className="chat-widget">
       <div className="chat-widget-header">
         <div className="bot-avatar"><BotIcon size={22}/></div>
-        <div><h2>Ask Revantage Bot</h2><p><span className="status-dot"/>Connected to Copilot Studio</p></div>
+        <div className="chat-widget-title"><h2>Ask Revantage Bot</h2><p><span className="status-dot"/>Connected to Copilot Studio</p></div>
+        <button className="conversation-reset" type="button" onClick={resetConversation} disabled={waiting} title="Clear this chat and start a new Direct Line conversation"><RefreshIcon size={15}/>New conversation</button>
       </div>
       <div className="message-list" ref={scrollRef} aria-live="polite">
         <div className="chat-intro">
@@ -152,7 +216,7 @@ export function ChatView() {
       </div>
       <form className="composer" onSubmit={onSubmit}>
         <label className="sr-only" htmlFor="question">Ask a question</label>
-        <textarea id="question" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submitQuestion(input); } }} placeholder="Ask about a Revantage policy or process..." rows={1} disabled={waiting}/>
+        <textarea id="question" value={input} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setInput(event.target.value)} onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submitQuestion(input); } }} placeholder="Ask about a Revantage policy or process..." rows={1} disabled={waiting}/>
         <button className="send-button" disabled={!input.trim() || waiting} aria-label="Send question"><SendIcon size={19}/></button>
       </form>
       <div className="chat-footer">Answers use available knowledge sources. Verify important decisions against the source document.</div>

@@ -25,3 +25,4 @@ export const CheckIcon = (p: IconProps) => <Icon {...p}><path d="m20 6-11 11-5-5
 export const ChevronIcon = (p: IconProps) => <Icon {...p}><path d="m9 18 6-6-6-6"/></Icon>;
 export const CloseIcon = (p: IconProps) => <Icon {...p}><path d="M18 6 6 18M6 6l12 12"/></Icon>;
 export const FileIcon = (p: IconProps) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></Icon>;
+export const RefreshIcon = (p: IconProps) => <Icon {...p}><path d="M20 6v5h-5"/><path d="M4 18v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.5-2.6L20 9M4 15l2.4 2.6A7 7 0 0 0 17.9 15"/></Icon>;

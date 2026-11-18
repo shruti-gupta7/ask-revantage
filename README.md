@@ -10,14 +10,14 @@ Ask Revantage is a responsive internal knowledge-assistant demonstration built w
 - Large, responsive chat workspace that uses the available browser area at 100% zoom.
 - Three suggested prompts inside the chat window only.
 - Visible loader and policy trivia that rotates every four seconds while the answer is prepared.
-- Direct Line polling that ignores short intermediate messages and waits up to three minutes for a final response and citations.
+- Direct Line token generation followed by explicit conversation start, user/token/conversation pairing, proactive token refresh, watermark polling, stale-session recovery, and a three-minute final-answer window.
 - Knowledge Library populated from source metadata returned in the current browser.
-- Admin Dashboard with recognizable, local SVG assets for Copilot Studio, SharePoint, OneDrive, Word, Excel, PowerPoint, PDF/file upload, and Website.
+- Admin Dashboard with recognizable local SVG assets and responsive connector-specific setup forms for Copilot Studio, SharePoint, OneDrive, Word, Excel, PowerPoint, PDF/file upload, and Website.
 - People Directory email actions use `mailto:` and never open Teams.
 - Local JPG/PNG profile assets, including Shruti Gupta and Ethan Brooks.
 - Light and dark themes, responsive navigation, reduced-motion support, keyboard focus states, Open Graph metadata, favicon, and link-preview image.
 - Canonical route-group structure with cleanup for obsolete duplicate routes and superseded legacy modules.
-- Patched Next.js 16.4.5 and complete PostCSS dependency configuration.
+- Patched Next.js 16.4.5 and a minimal PostCSS configuration for the authored CSS, with no unused Tailwind plugin dependency.
 
 ## Local and Codespaces setup
 
@@ -73,7 +73,7 @@ PEOPLE_DIRECTORY_API_TOKEN=
 4. Confirm the Vercel project has `DIRECT_LINE_SECRET`, `DIRECT_LINE_TRUSTED_ORIGINS`, and `NEXT_PUBLIC_SITE_URL` for the environments you use.
 5. Redeploy after changing environment variables.
 
-The previous PostCSS failure is fixed because `postcss.config.mjs` and `package.json` now agree: `@tailwindcss/postcss` is explicitly installed as a development dependency. The interface uses authored CSS, but keeping the plugin dependency resolves the existing build configuration without a risky build-only workaround.
+The previous PostCSS failure is removed at its source. The interface uses authored CSS, so `postcss.config.mjs` now has no Tailwind plugin and `package.json` no longer installs unused Tailwind dependencies.
 
 The pre-typecheck and prebuild cleanup also removes files left behind by older ZIP releases. Those legacy files imported `SupportRequest`, `KnowledgeSource`, `AdminIcon`, and `ChatIcon`, included an untyped CommonJS classifier, and included `context/chat-context.tsx`, which imported the superseded `lib/direct-line-client` module. The current chat uses `components/chat-view.tsx` with `lib/directline.ts`, so deleting the stale files is safer than restoring incompatible compatibility modules.
 
@@ -116,18 +116,21 @@ Production work should add enterprise authentication, delegated authorization, t
 | Microsoft Copilot Studio | Agent orchestration and grounded knowledge responses |
 | Direct Line | Short-lived browser conversation token and activities |
 | Local SVG/PNG/JPG assets | Product logos, Open Graph image, favicon and avatars |
-| PostCSS / Tailwind PostCSS plugin | Compatible CSS build pipeline; dependency is explicitly installed |
+| PostCSS | Minimal build configuration for the app’s authored CSS |
 | GitHub Codespaces | Browser-based install, validation, commit and push workflow |
 | Vercel | Hosting, environment variables and automatic deployment |
 
 ## Security model
 
 - The Direct Line secret is read only in `app/api/directline/token/route.ts`.
-- The browser receives a short-lived, conversation-scoped token, never the secret.
+- The server generates a user-bound token and immediately starts that exact reserved conversation before returning the paired conversation ID, short-lived token, and normalized Direct Line user ID to the browser.
+- The browser refreshes the same conversation token before expiry. A refreshed token is rejected if its conversation ID does not match.
+- HTTP activity polling uses the documented conversation activities URL and replays the exact watermark. It does not reuse expired WebSocket stream URLs.
+- Invalid legacy, expired, incomplete, unauthorized, or missing persisted sessions are cleared as a unit and restarted once; a new token is never attached to an old conversation ID.
 - `DIRECT_LINE_TRUSTED_ORIGINS` can restrict token creation to named origins.
 - Token responses are marked `no-store`.
 - Source links are rendered only when Copilot provides HTTP or HTTPS metadata.
-- Admin source selections are browser-only demonstration state unless a real API is connected.
+- Admin source selections and non-sensitive form fields are a clearly labelled browser-only hackathon simulation unless a real API is connected. Connector forms never request secrets; production credentials belong in approved server-side services.
 
 ## Verification
 

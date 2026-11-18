@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { MailIcon, SearchIcon } from "@/components/icons";
 
 const people = [
@@ -20,7 +21,7 @@ export function PeopleView() {
   const filtered = useMemo(() => people.filter((person) => Object.values(person).flat().join(" ").toLowerCase().includes(query.toLowerCase())), [query]);
   return <section className="page-content people-page">
     <div className="page-heading"><div><span className="eyebrow">FIND THE RIGHT PERSON</span><h2>People Directory</h2><p>Connect with fictional demo specialists for policy and process support.</p></div></div>
-    <label className="search-field directory-search"><SearchIcon size={18}/><span className="sr-only">Search people</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, team, location, or expertise"/></label>
+    <label className="search-field directory-search"><SearchIcon size={18}/><span className="sr-only">Search people</span><input value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="Search by name, team, location, or expertise"/></label>
     <div className="people-grid">{filtered.map((person) => <article className="person-card" key={person.email}>
       <div className="person-photo">{person.image ? <Image src={person.image} alt={person.name} width={72} height={72}/> : <span>{person.initials}</span>}</div>
       <div className="person-copy"><h3>{person.name}</h3><p className="person-role">{person.role}</p><p className="person-meta">{person.department} · {person.location}</p><div className="expertise">{person.expertise.map((item) => <span key={item}>{item}</span>)}</div></div>

@@ -34,14 +34,25 @@ await Promise.all(obsolete.map(async (path) => {
 }));
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
-if (!pkg.devDependencies?.["@tailwindcss/postcss"]) throw new Error("@tailwindcss/postcss is missing");
-const all = await Promise.all([
+if (pkg.devDependencies?.["@tailwindcss/postcss"] || pkg.devDependencies?.tailwindcss) throw new Error("Unused Tailwind build dependency remains");
+const [chat, people, admin, directline, tokenRoute, types, sharepoint] = await Promise.all([
   readFile("components/chat-view.tsx", "utf8"),
   readFile("components/people-view.tsx", "utf8"),
   readFile("components/admin-view.tsx", "utf8"),
+  readFile("lib/directline.ts", "utf8"),
+  readFile("app/api/directline/token/route.ts", "utf8"),
+  readFile("lib/types.ts", "utf8"),
+  readFile("public/assets/source-icons/sharepoint.svg", "utf8"),
 ]);
+const all = [chat, people, admin];
 const legacyBotName = ["Ask", "Revant", "Bot"].join(" ");
 if (all.some((text) => text.includes(legacyBotName))) throw new Error("Legacy bot name remains");
-if (!all[0].includes("Ask Revantage Bot")) throw new Error("Correct bot name is missing");
-if (!all[1].includes("mailto:")) throw new Error("People Directory email actions are missing");
+if (!chat.includes("Ask Revantage Bot")) throw new Error("Correct bot name is missing");
+if (!people.includes("mailto:")) throw new Error("People Directory email actions are missing");
+if (!tokenRoute.includes("/tokens/generate") || !tokenRoute.includes("/conversations")) throw new Error("Direct Line generate/start lifecycle is incomplete");
+if (!directline.includes("/tokens/refresh") || !directline.includes("ResourceNotFound")) throw new Error("Direct Line refresh/recovery logic is incomplete");
+if (!chat.includes("clearPersistedSession") || !chat.includes("isRecoverableDirectLineError")) throw new Error("Persisted-session recovery is missing");
+if (!types.includes("userId: string") || !directline.includes("from: { id: session.userId")) throw new Error("Direct Line user/token pairing is missing");
+if (!admin.includes("connector-form") || !admin.includes("Save prototype configuration")) throw new Error("Connector forms are missing");
+if (!sharepoint.includes("Microsoft SharePoint") || !sharepoint.includes(">S</text>")) throw new Error("Recognizable SharePoint asset is missing");
 console.log("Static verification passed.");
