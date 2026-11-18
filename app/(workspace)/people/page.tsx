@@ -1,2 +1,5 @@
+import type { Metadata } from "next";
 import { PeopleView } from "@/components/people-view";
-export default function PeoplePage() { return <PeopleView />; }
+
+export const metadata: Metadata = { title: "People Directory", description: "Find the right fictional demo specialist." };
+export default function PeoplePage() { return <PeopleView/>; }

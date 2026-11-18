@@ -1,28 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { DownloadIcon, ExternalIcon, FileIcon, SearchIcon } from "./icons";
-
-const documents = [
-  { title: "Cab & Employee Transportation Policy", type: "PDF", area: "Workplace Mobility", updated: "Demo source", url: "/demo/Ask_Revantage_Demo_Cab_Policy.pdf" },
-  { title: "Business Travel Quick Guide", type: "PDF", area: "Travel & Expense", updated: "Demo source", url: "/demo/Business_Travel_Quick_Guide.pdf" },
-  { title: "Workplace Access Handbook", type: "PDF", area: "Workplace Access", updated: "Demo source", url: "/demo/Workplace_Access_Handbook.pdf" },
-  { title: "Security Incident Checklist", type: "PDF", area: "Security Operations", updated: "Demo source", url: "/demo/Security_Incident_Checklist.pdf" }
-];
+import { useEffect, useMemo, useState } from "react";
+import { DownloadIcon, OpenIcon, SearchIcon } from "@/components/icons";
+import { fileIconFor, readStoredSources } from "@/lib/source-storage";
+import type { SourceDocument } from "@/lib/types";
 
 export function KnowledgeView() {
+  const [sources, setSources] = useState<SourceDocument[]>([]);
   const [query, setQuery] = useState("");
-  const visible = useMemo(() => documents.filter(doc => `${doc.title} ${doc.area} ${doc.type}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  return <section className="content-page">
-    <div className="page-heading"><div><span className="eyebrow">Connected knowledge</span><h1>Knowledge Library</h1><p>Find the fictional files used in this hackathon experience.</p></div><span className="count-badge">{documents.length} sources</span></div>
-    <div className="search-box glass-card"><SearchIcon /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by title, service area or file type" aria-label="Search knowledge documents" /></div>
-    <div className="document-grid">{visible.map(doc => <article className="document-card glass-card" key={doc.title}>
-      <div className="document-icon"><FileIcon /><span>{doc.type}</span></div>
-      <div className="document-meta"><span>{doc.area}</span><small>{doc.updated}</small></div>
-      <h2>{doc.title}</h2>
-      <p>Fictional content created for the Ask Revantage hackathon demonstration.</p>
-      <div className="card-actions"><a className="button secondary" href={doc.url} target="_blank" rel="noreferrer"><ExternalIcon />Open</a><a className="button ghost" href={doc.url} download><DownloadIcon />Download</a></div>
-    </article>)}</div>
-    {!visible.length && <div className="empty-state">No demo sources match that search.</div>}
+  useEffect(() => {
+    const refresh = () => setSources(readStoredSources());
+    refresh();
+    window.addEventListener("storage", refresh);
+    window.addEventListener("ask-revantage:sources", refresh as EventListener);
+    return () => { window.removeEventListener("storage", refresh); window.removeEventListener("ask-revantage:sources", refresh as EventListener); };
+  }, []);
+  const filtered = useMemo(() => sources.filter((source) => `${source.name} ${source.fileType || ""} ${source.location || ""}`.toLowerCase().includes(query.toLowerCase())), [sources, query]);
+
+  return <section className="page-content knowledge-page">
+    <div className="page-heading"><div><span className="eyebrow">CURRENT CONVERSATION</span><h2>Ask Revantage - Hackathon Knowledge Base</h2><p>Documents appear here when Ask Revantage Bot cites them in a response.</p></div><span className="count-badge">{sources.length} {sources.length === 1 ? "document" : "documents"}</span></div>
+    <div className="library-card">
+      <div className="library-toolbar"><label className="search-field"><SearchIcon size={17}/><span className="sr-only">Search knowledge sources</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cited documents"/></label></div>
+      {filtered.length ? <div className="document-grid">{filtered.map((source) => <article className="document-card" key={source.id}>
+        <img src={fileIconFor(source)} alt="" width="42" height="42"/>
+        <div className="document-details"><h3>{source.name}</h3><p>{source.location || source.fileType || "Knowledge source"}</p><span>Added from a grounded response</span></div>
+        <div className="document-actions">{source.url && <a className="button secondary" href={source.url} target="_blank" rel="noreferrer"><OpenIcon size={15}/>Open</a>}{(source.downloadUrl || source.url) && <a className="button ghost" href={source.downloadUrl || source.url} target="_blank" rel="noreferrer" download><DownloadIcon size={15}/>Download</a>}</div>
+      </article>)}</div> : <div className="empty-state"><img src="/assets/source-icons/folder.svg" alt="" width="64" height="64"/><h3>{query ? "No matching documents" : "No cited documents yet"}</h3><p>{query ? "Try a different search term." : "Ask a question in Chat. When Copilot returns supporting document metadata, it will be collected here."}</p></div>}
+    </div>
   </section>;
 }

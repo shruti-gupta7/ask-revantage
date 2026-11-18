@@ -1,29 +1,32 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
-import { ExternalIcon, SearchIcon } from "./icons";
+import { MailIcon, SearchIcon } from "@/components/icons";
 
 const people = [
-  ["Maya Rao", "People Operations", "Benefits and employee support", "maya.rao@example.com"],
-  ["Ethan Brooks", "Technology", "Ask Revantage administration", "ethan.brooks@example.com"],
-  ["Noah Williams", "Workplace Mobility", "Cab and transport support", "noah.williams@example.com"],
-  ["Aisha Khan", "Travel & Expense", "Travel policy and reimbursement", "aisha.khan@example.com"],
-  ["Liam Chen", "Security Operations", "Security incidents and awareness", "liam.chen@example.com"],
-  ["Priya Mehta", "Workplace Access", "Badges and office access", "priya.mehta@example.com"],
-  ["Sofia Martinez", "Payroll", "Payroll questions", "sofia.martinez@example.com"],
-  ["Oliver Jones", "Technology Help Desk", "Devices and application access", "oliver.jones@example.com"]
+  { name: "Shruti Gupta", role: "Senior Accountant, Corporate Tax", department: "Corporate Tax", location: "Bangalore", expertise: ["Tax", "Workpapers"], email: "shruti.gupta@example.com", image: "/assets/shruti-gupta-avatar.jpg" },
+  { name: "Ethan Brooks", role: "People Operations Partner", department: "People & Culture", location: "Chicago", expertise: ["Leave", "Benefits"], email: "ethan.brooks@example.com", image: "/assets/ethan-brooks-avatar.png" },
+  { name: "Maya Patel", role: "Workplace Experience Lead", department: "Workplace", location: "Bangalore", expertise: ["Cab policy", "Office access"], email: "maya.patel@example.com", initials: "MP" },
+  { name: "Oliver Chen", role: "Technology Support Manager", department: "Technology", location: "New York", expertise: ["Devices", "Access"], email: "oliver.chen@example.com", initials: "OC" },
+  { name: "Sofia Ramirez", role: "Travel Programme Manager", department: "Operations", location: "Chicago", expertise: ["Travel", "Expenses"], email: "sofia.ramirez@example.com", initials: "SR" },
+  { name: "Noah Williams", role: "Compliance Business Partner", department: "Risk & Compliance", location: "London", expertise: ["Compliance", "Controls"], email: "noah.williams@example.com", initials: "NW" },
+  { name: "Ava Thompson", role: "Learning and Development Lead", department: "People & Culture", location: "Philadelphia", expertise: ["Learning", "Onboarding"], email: "ava.thompson@example.com", initials: "AT" },
+  { name: "Liam Foster", role: "Finance Operations Director", department: "Finance", location: "London", expertise: ["Finance", "Approvals"], email: "liam.foster@example.com", initials: "LF" },
 ];
 
 export function PeopleView() {
   const [query, setQuery] = useState("");
-  const visible = useMemo(() => people.filter(person => person.join(" ").toLowerCase().includes(query.toLowerCase())), [query]);
-  return <section className="content-page">
-    <div className="page-heading"><div><span className="eyebrow">Find the right person</span><h1>People Directory</h1><p>Demo contacts for common employee support areas.</p></div><span className="count-badge">Fictional directory</span></div>
-    <div className="search-box glass-card"><SearchIcon /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by name, team, role or support area" aria-label="Search people directory" /></div>
-    <div className="people-grid">{visible.map(([name, team, area, email]) => <article className="person-card glass-card" key={name}>
-      <div className="initial-avatar">{name.split(" ").map(part => part[0]).join("")}</div>
-      <div className="person-info"><h2>{name}</h2><span>{team}</span><p>{area}</p></div>
-      <a className="button secondary" href={`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}`} target="_blank" rel="noreferrer">Open Teams <ExternalIcon /></a>
+  const filtered = useMemo(() => people.filter((person) => Object.values(person).flat().join(" ").toLowerCase().includes(query.toLowerCase())), [query]);
+  return <section className="page-content people-page">
+    <div className="page-heading"><div><span className="eyebrow">FIND THE RIGHT PERSON</span><h2>People Directory</h2><p>Connect with fictional demo specialists for policy and process support.</p></div></div>
+    <label className="search-field directory-search"><SearchIcon size={18}/><span className="sr-only">Search people</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, team, location, or expertise"/></label>
+    <div className="people-grid">{filtered.map((person) => <article className="person-card" key={person.email}>
+      <div className="person-photo">{person.image ? <Image src={person.image} alt={person.name} width={72} height={72}/> : <span>{person.initials}</span>}</div>
+      <div className="person-copy"><h3>{person.name}</h3><p className="person-role">{person.role}</p><p className="person-meta">{person.department} · {person.location}</p><div className="expertise">{person.expertise.map((item) => <span key={item}>{item}</span>)}</div></div>
+      <a className="email-action" href={`mailto:${person.email}?subject=${encodeURIComponent("Ask Revantage support question")}`} aria-label={`Email ${person.name}`} title={`Email ${person.name}`}><MailIcon size={20}/></a>
     </article>)}</div>
+    {!filtered.length && <div className="empty-state"><h3>No people found</h3><p>Try a broader name, department, or location.</p></div>}
+    <p className="demo-note">All directory profiles and email addresses on this page are fictional and provided only for the demonstration.</p>
   </section>;
 }

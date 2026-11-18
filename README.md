@@ -1,133 +1,142 @@
 # Ask Revantage
 
-Ask Revantage is a Next.js custom chat for a Microsoft Copilot Studio agent. This release fixes the Direct Line response lifecycle so an intermediate message such as **"Let me read the cab policy and related files"** stays in the processing state instead of ending the request.
+Ask Revantage is a responsive internal knowledge-assistant demonstration built with Next.js and Microsoft Copilot Studio. The custom chat UI obtains a short-lived Direct Line conversation token from a server-only route, waits for a substantive final answer, and collects source metadata returned with grounded responses.
 
-## What changed in 4.0.0
+> All People Directory records, addresses, and source-configuration actions are fictional demonstration data. The source selector does not claim that ingestion occurred.
 
-- Treats the Direct Line `POST /activities` response as an acknowledgment only.
-- Opens the preauthorized Direct Line WebSocket and reads every subsequent `ActivitySet`.
-- Tracks each `watermark` verbatim and falls back to `GET /activities?watermark=...` when streaming is unavailable.
-- Deduplicates activities by activity ID when WebSocket and HTTP retrieval overlap.
-- Correlates bot activities to the current user activity with `replyToId` when available and timestamp boundaries otherwise.
-- Classifies short progress messages, `typing` activities and progress events without completing the request.
-- Keeps a visible three-dot loader and four-second rotating trivia active while progress continues.
-- Waits for a substantive answer and a four-second quiet period so separately delivered citations can join the answer.
-- Preserves citations and source metadata from activities, attachments, adaptive cards, entities and `channelData`.
-- Renders safe **Open** and **Download** actions for returned source URLs.
-- Stops only on a substantive final answer, `endOfConversation`, a terminal connection error, or the configured hard timeout.
-- Refreshes the short-lived Direct Line conversation token before it expires.
-- Keeps the Direct Line secret server-side.
+## Included in this root-ready package
+
+- Bot identity is **Ask Revantage Bot** everywhere.
+- Large, responsive chat workspace that uses the available browser area at 100% zoom.
+- Three suggested prompts inside the chat window only.
+- Visible loader and policy trivia that rotates every four seconds while the answer is prepared.
+- Direct Line polling that ignores short intermediate messages and waits up to three minutes for a final response and citations.
+- Knowledge Library populated from source metadata returned in the current browser.
+- Admin Dashboard with recognizable, local SVG assets for Copilot Studio, SharePoint, OneDrive, Word, Excel, PowerPoint, PDF/file upload, and Website.
+- People Directory email actions use `mailto:` and never open Teams.
+- Local JPG/PNG profile assets, including Shruti Gupta and Ethan Brooks.
+- Light and dark themes, responsive navigation, reduced-motion support, keyboard focus states, Open Graph metadata, favicon, and link-preview image.
+- Canonical route-group structure with cleanup for obsolete duplicate top-level routes.
+- Patched Next.js 16.4.5 and complete PostCSS dependency configuration.
+
+## Local and Codespaces setup
+
+Node.js 20.9 or later is required.
+
+```bash
+npm install
+npm run verify
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+### Environment variables
+
+Create `.env.local` for local development. In Vercel, add the same sensitive value as an encrypted Secret.
+
+```text
+DIRECT_LINE_SECRET=<Copilot Studio Direct Line web-channel secret>
+DIRECT_LINE_TRUSTED_ORIGINS=http://localhost:3000,https://your-app.vercel.app
+NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
+```
+
+The token route also accepts the legacy `COPILOT_STUDIO_DIRECT_LINE_SECRET` variable name, but `DIRECT_LINE_SECRET` is the preferred name.
+
+Optional future integrations:
+
+```text
+DATA_SOURCE_API_URL=
+DATA_SOURCE_STORE=
+PEOPLE_DIRECTORY_API_URL=
+PEOPLE_DIRECTORY_API_TOKEN=
+```
+
+## GitHub Codespaces to Vercel
+
+1. Upload or extract this ZIP at the repository root.
+2. Run:
+
+   ```bash
+   npm install
+   npm run verify
+   ```
+
+3. Commit all changes, including removals of obsolete routes:
+
+   ```bash
+   git add -A
+   git commit -m "Complete Ask Revantage UI and build fixes"
+   git push origin main
+   ```
+
+4. Confirm the Vercel project has `DIRECT_LINE_SECRET`, `DIRECT_LINE_TRUSTED_ORIGINS`, and `NEXT_PUBLIC_SITE_URL` for the environments you use.
+5. Redeploy after changing environment variables.
+
+The previous PostCSS failure is fixed because `postcss.config.mjs` and `package.json` now agree: `@tailwindcss/postcss` is explicitly installed as a development dependency. The interface uses authored CSS, but keeping the plugin dependency resolves the existing build configuration without a risky build-only workaround.
 
 ## Current hackathon architecture
 
 ```mermaid
 flowchart LR
-  U[Hackathon user] --> V[Vercel Next.js app]
-  V --> T[Server token endpoint]
-  T --> D[Direct Line 3.0]
+  U[Hackathon user] -->|Browser| V[Ask Revantage on Vercel]
+  V -->|POST /api/directline/token| T[Server token route]
+  T -->|Secret on server only| D[Direct Line]
   D --> C[Copilot Studio agent]
-  C --> K[Fictional uploaded knowledge]
-  C --> D --> V
+  C --> K[Uploaded demo knowledge files]
+  C -->|Answer and source metadata| D
+  D --> V
+  V -->|Answer, Open, Download| U
 ```
-
-The browser receives a temporary, conversation-scoped token. It never receives the Direct Line secret.
 
 ## Production architecture
 
 ```mermaid
 flowchart LR
-  E[Revantage employee] --> ID[Microsoft Entra ID]
-  ID --> A[Ask Revantage application]
-  A --> G[Authenticated agent integration]
-  G --> C[Copilot Studio]
+  U[Authenticated employee] --> E[Microsoft Entra ID]
+  E --> W[Revantage web application]
+  W --> A[API / agent orchestration layer]
+  A --> C[Copilot Studio or Microsoft 365 Agents SDK]
   C --> S[Permission-aware SharePoint and OneDrive]
-  C --> B[Approved enterprise systems]
-  C --> G --> A
+  A --> P[People directory API]
+  A --> O[Observability, audit and safety controls]
+  C --> A --> W --> U
 ```
 
-Production should use employee authentication, least-privilege access and permission-aware sources. Do not use the hackathon's unauthenticated pattern for restricted content.
+Production work should add enterprise authentication, delegated authorization, tenant permission checks, centralized source governance, telemetry, rate limits, content-safety controls, retention rules, accessibility testing, security review, and named service ownership.
 
-## Tools used
+## Tools and responsibilities
 
-| Tool | Role in this implementation |
-|---|---|
-| Next.js | Application shell, routes, server token endpoints and metadata |
-| React | Persistent chat state, loader, trivia and responsive UI |
-| Microsoft Copilot Studio | Agent authoring, orchestration and grounded answers |
-| Direct Line 3.0 | Browser-safe conversation transport using tokens, WebSocket and watermarks |
-| Microsoft Entra ID | Recommended production employee identity layer |
-| SharePoint / OneDrive | Recommended production knowledge sources with source permissions |
-| GitHub Codespaces | Repository editing, testing and source control workflow |
-| Vercel | Next.js build, environment variables and deployment |
-| Microsoft Teams | People Directory deep links |
+| Tool | Current use |
+| --- | --- |
+| Next.js | App Router, metadata, server-side token route, Vercel deployment |
+| React | Stateful chat, theme, navigation and responsive views |
+| Microsoft Copilot Studio | Agent orchestration and grounded knowledge responses |
+| Direct Line | Short-lived browser conversation token and activities |
+| Local SVG/PNG/JPG assets | Product logos, Open Graph image, favicon and avatars |
+| PostCSS / Tailwind PostCSS plugin | Compatible CSS build pipeline; dependency is explicitly installed |
+| GitHub Codespaces | Browser-based install, validation, commit and push workflow |
+| Vercel | Hosting, environment variables and automatic deployment |
 
-## Configure locally
+## Security model
 
-1. Copy the environment file.
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-2. Add the Copilot Studio Direct Line secret to `DIRECT_LINE_SECRET`. Never rename it with a `NEXT_PUBLIC_` prefix.
-3. For the hackathon's fictional public documents, set the Copilot Studio agent to the agreed authentication mode, save, and publish the agent again. Authentication changes do not take effect until publishing.
-4. Install and verify.
-
-   ```bash
-   npm install
-   npm run verify
-   npm run dev
-   ```
-
-5. Open `http://localhost:3000`.
-
-## Vercel deployment
-
-1. Extract this ZIP directly into the repository root and overwrite existing files.
-2. Run the cleanup before committing. It removes stale top-level routes that conflict with `app/(workspace)`.
-
-   ```bash
-   npm install
-   npm run clean:routes
-   npm run verify
-   git add -A
-   git commit -m "Fix Direct Line final answer lifecycle"
-   git push origin main
-   ```
-
-3. In **Vercel > Project > Settings > Environment Variables**, add:
-   - `DIRECT_LINE_SECRET`
-   - `DIRECT_LINE_TRUSTED_ORIGINS` with the deployed origin
-   - optionally `NEXT_PUBLIC_SITE_URL` with the production URL
-   - optionally `NEXT_PUBLIC_DIRECT_LINE_TIMEOUT_MS` (default `180000`)
-4. Redeploy after changing environment variables.
-
-## Direct Line lifecycle
-
-1. The server exchanges the master secret for a short-lived token with an unguessable `dl_` user ID.
-2. The server starts the conversation and returns the token, conversation ID and `streamUrl`.
-3. The client opens one WebSocket per conversation. Direct Line permits one stream connection for a conversation.
-4. Before each question, the client drains stale activities and records the current watermark.
-5. The client posts the user activity. The returned activity ID is an acknowledgment and correlation key, not a bot answer.
-6. Incoming activities are deduplicated and correlated. `typing`, progress events and short progress phrases update the visible processing status.
-7. A substantive message becomes a final-answer candidate. A short settle window lets citation activities arrive separately.
-8. If the WebSocket fails, HTTP polling continues from the last watermark. The pending request remains active.
+- The Direct Line secret is read only in `app/api/directline/token/route.ts`.
+- The browser receives a short-lived, conversation-scoped token, never the secret.
+- `DIRECT_LINE_TRUSTED_ORIGINS` can restrict token creation to named origins.
+- Token responses are marked `no-store`.
+- Source links are rendered only when Copilot provides HTTP or HTTPS metadata.
+- Admin source selections are browser-only demonstration state unless a real API is connected.
 
 ## Verification
 
-- `npm test` checks progress classification, final-answer classification, citation extraction, activity correlation and deduplication.
-- `npm run typecheck` checks all application TypeScript.
-- `npm run build` verifies the Next.js production build and route tree.
-- `npm run verify` runs all three.
+```bash
+npm run typecheck
+npm run verify:static
+npm run build
+```
 
-## Microsoft references
+`verify:static` checks the corrected bot name, email actions, required local source icons, and the PostCSS dependency. A production deployment must still be tested with the published Copilot Studio agent and the actual Vercel origin.
 
-- Direct Line - receive activities: https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-receive-activities
-- Direct Line - start conversation: https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-start-conversation
-- Direct Line authentication and token refresh: https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-authentication
-- Direct Line reconnect: https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-reconnect-to-conversation
-- Copilot Studio authentication: https://learn.microsoft.com/microsoft-copilot-studio/configuration-end-user-authentication
+## AI-assisted development disclosure
 
-## Demo data notice
-
-The documents and directory entries in this package are fictional hackathon content. They are not Revantage policies, records or employee directory data.
+This hackathon prototype was developed with AI assistance. Human reviewers remain responsible for code review, environment configuration, source permissions, production security, policy accuracy, and deployment approval.

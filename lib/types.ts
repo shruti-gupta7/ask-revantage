@@ -1,23 +1,25 @@
-export type SourceStatus = "Ready" | "Indexing" | "Needs review";
-export type SourceType = "SharePoint" | "OneDrive" | "Excel" | "PDF" | "Website" | "Manual";
-export type KnowledgeSource = {
+export type SourceDocument = {
   id: string;
   name: string;
-  type: SourceType;
-  category: string;
-  status: SourceStatus;
-  owner: string;
-  updated: string;
-  location: string;
-  content: string;
-  dataClass: "Synthetic demo";
-  href?: string;
+  url?: string;
+  downloadUrl?: string;
+  fileType?: string;
+  location?: string;
+  lastSeenAt: string;
 };
-export type SupportRequest = {
+
+export type ChatMessage = {
   id: string;
-  subject: string;
-  team: string;
-  status: "Open" | "In progress" | "Resolved";
-  created: string;
-  description: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+  sources?: SourceDocument[];
+  pending?: boolean;
+};
+
+export type DirectLineSession = {
+  token: string;
+  conversationId: string;
+  expiresAt: number;
+  watermark?: string;
 };
