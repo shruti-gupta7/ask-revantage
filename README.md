@@ -7,17 +7,19 @@ Ask Revantage is a responsive internal knowledge-assistant demonstration built w
 ## Included in this root-ready package
 
 - Bot identity is **Ask Revantage Bot** everywhere.
+- Centered first-screen welcome state with the complete Ask Revantage logo, the greeting **Hey Shruti! How can I help you today?**, three suggested prompts, and a large composer. The full chat appears only after the first prompt is submitted, with a smooth reveal that respects reduced-motion settings.
 - Large, responsive chat workspace that uses the available browser area at 100% zoom.
-- Three suggested prompts inside the chat window only.
+- Three suggested next-question prompts inside the chat window. They remain visible after each answer and adapt to cab, leave, or travel topics.
 - Visible loader and policy trivia that rotates every four seconds while the answer is prepared.
 - Direct Line token generation followed by explicit conversation start, user/token/conversation pairing, proactive token refresh, watermark polling, stale-session recovery, and a three-minute final-answer window.
 - Secure GitHub-Flavored Markdown rendering for Copilot responses, including headings, emphasis, lists, tables, paragraphs, code, blockquotes, and safe links. Raw HTML is skipped and unsafe URL schemes are rejected.
 - Citation parsing across Direct Line activity entities, attachments, channel data, markdown links, and nested schema.org citation/appearance records. Copilot-returned HTTP(S) document URLs are preserved rather than reconstructed from filenames.
-- Clickable source-document cards with explicit **Open** actions. PDF sources use a recognizable PDF icon and open the actual returned PDF/document URL in a new tab. Download is shown only for an explicit download URL or a direct file URL.
-- Knowledge Library populated from the same source names and real URLs returned in the current browser. Filename-only citations remain visible but are clearly unavailable and never receive fabricated Open or Download actions.
+- Clickable source-document cards with explicit **Open** actions. PDF sources use a recognizable PDF icon and open in a new tab. Real Copilot URLs take priority. Known fictional demo filenames use an explicit allowlist that resolves to the matching PDF under `public/knowledge/`.
+- Knowledge Library populated from the same shared resolver used by Chat. The three bundled cab, leave, and travel PDFs can open and download even when Copilot Studio returns only their known filenames. Unknown filename-only citations remain unavailable and never receive fabricated links.
 - Admin Dashboard with recognizable local SVG assets and responsive connector-specific setup forms for Copilot Studio, SharePoint, OneDrive, Word, Excel, PowerPoint, PDF/file upload, and Website.
 - People Directory email actions use `mailto:` and never open Teams.
 - Distinct local JPG/PNG profile assets for every People Directory profile.
+- Photo-style AI-generated directory avatar for the fictional Ethan Brooks profile, stored as a local JPG.
 - Complete Ask Revantage wordmark in the responsive navigation without desktop or mobile cropping.
 - Light and dark themes, responsive navigation, reduced-motion support, keyboard focus states, Open Graph metadata, favicon, and link-preview image.
 - Canonical route-group structure with cleanup for obsolete duplicate routes and superseded legacy modules.
@@ -121,6 +123,7 @@ Production work should add enterprise authentication, delegated authorization, t
 | Microsoft Copilot Studio | Agent orchestration and grounded knowledge responses |
 | Direct Line | Short-lived browser conversation token and activities |
 | Local SVG/PNG/JPG assets | Product logos, Open Graph image, favicon and avatars |
+| Local fictional PDFs | Allowlisted citation fallbacks for the cab, leave, and travel demo sources |
 | PostCSS | Minimal build configuration for the app’s authored CSS |
 | GitHub Codespaces | Browser-based install, validation, commit and push workflow |
 | Vercel | Hosting, environment variables and automatic deployment |
@@ -134,7 +137,7 @@ Production work should add enterprise authentication, delegated authorization, t
 - Invalid legacy, expired, incomplete, unauthorized, or missing persisted sessions are cleared as a unit and restarted once; a new token is never attached to an old conversation ID.
 - `DIRECT_LINE_TRUSTED_ORIGINS` can restrict token creation to named origins.
 - Token responses are marked `no-store`.
-- Source links are rendered only when Copilot provides valid HTTP or HTTPS metadata. The same returned URL is used by the chat card and Knowledge Library; filenames are never converted into guessed links.
+- Source links use a valid Copilot-provided HTTP(S) URL when present. If Copilot returns only a filename, Chat and Knowledge Library can resolve only the known fictional filenames in the explicit local allowlist. Unknown filenames never become guessed links.
 - Markdown HTML is skipped, external images are not loaded, and links are restricted to HTTP, HTTPS, `mailto:`, or same-page anchors as appropriate.
 - Admin source selections and non-sensitive form fields are a clearly labelled browser-only hackathon simulation unless a real API is connected. Connector forms never request secrets; production credentials belong in approved server-side services.
 

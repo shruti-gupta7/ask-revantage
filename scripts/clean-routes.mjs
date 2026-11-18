@@ -16,6 +16,7 @@ const obsoletePaths = [
   "lib/direct-line-classifier.js",
   "lib/direct-line-classifier.d.ts",
   "lib/store.ts",
+  "public/assets/ethan-brooks-avatar.png",
 ];
 
 for (const path of obsoletePaths) {

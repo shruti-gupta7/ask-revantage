@@ -82,7 +82,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .workspace { min-height: 0; flex: 1; overflow: auto; }
 
 .chat-stage { width: 100%; height: 100%; padding: 14px 16px 16px; display: flex; justify-content: center; background: radial-gradient(circle at 18% 8%, rgba(130,195,191,.13), transparent 26%), radial-gradient(circle at 92% 94%, rgba(76,103,145,.13), transparent 28%), var(--page); }
+.chat-stage.is-welcome { align-items: center; overflow: auto; }
+.welcome-state { width: min(100%, 1100px); min-height: min(720px, 100%); margin: auto; display: grid; place-items: center; padding: clamp(30px, 6vh, 72px) clamp(20px, 4vw, 52px); animation: welcomeIn .48s cubic-bezier(.22,.8,.28,1) both; }
+.welcome-content { width: min(100%, 820px); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.welcome-logo-panel { width: min(100%, 470px); padding: 16px 20px; border: .5px solid rgba(229,231,235,.92); border-radius: 18px; background: rgba(255,255,255,.94); box-shadow: 0 14px 40px rgba(15,23,42,.07); }
+.welcome-logo { display: block; width: 100%; height: auto; object-fit: contain; }
+.welcome-heading { margin: clamp(26px, 4vh, 40px) 0 0; color: var(--ink); font: 600 clamp(30px, 4.2vw, 48px)/1.13 Georgia, serif; letter-spacing: -.025em; }
+.welcome-heading span { display: block; }
+.welcome-heading span + span { margin-top: 5px; }
+.welcome-prompts { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin: clamp(22px, 3.5vh, 32px) 0 16px; }
+.welcome-prompts button { min-height: 38px; padding: 8px 14px; border: .5px solid var(--border); border-radius: 20px; background: color-mix(in srgb, var(--card) 94%, transparent); color: var(--text); box-shadow: 0 4px 14px rgba(15,23,42,.035); cursor: pointer; transition: transform .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.welcome-prompts button:hover { border-color: var(--navy); color: var(--navy); transform: translateY(-2px); box-shadow: 0 7px 20px rgba(15,23,42,.07); }
+.welcome-composer { width: min(100%, 760px); min-height: 126px; border: .5px solid var(--border); background: color-mix(in srgb, var(--card) 96%, transparent); border-radius: 16px; padding: 13px 13px 11px 17px; display: flex; flex-direction: column; box-shadow: 0 16px 44px rgba(15,23,42,.10); text-align: left; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.welcome-composer:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(76,103,145,.12), 0 18px 48px rgba(15,23,42,.11); transform: translateY(-1px); }
+.welcome-composer textarea { width: 100%; flex: 1; min-height: 68px; resize: none; border: 0; outline: 0; padding: 3px 1px 8px; background: transparent; color: var(--ink); font-size: 15px; line-height: 1.55; }
+.welcome-composer textarea::placeholder { color: var(--faint); }
+.welcome-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--faint); font-size: 10px; }
+.welcome-send-button { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 11px; background: var(--navy); color: white; cursor: pointer; transition: transform .16s ease, background .16s ease; }
+.welcome-send-button:hover { background: var(--navy-dark); transform: translateY(-1px); }
+.welcome-send-button:disabled { opacity: .36; cursor: not-allowed; transform: none; }
 .chat-widget { width: min(100%, 1380px); height: 100%; min-height: 560px; background: color-mix(in srgb, var(--card) 92%, transparent); border: .5px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(18px); }
+.chat-reveal { transform-origin: center 65%; animation: chatReveal .48s cubic-bezier(.22,.8,.28,1) both; }
 .chat-widget-header { min-height: 68px; display: flex; align-items: center; gap: 11px; padding: 11px 20px; border-bottom: .5px solid var(--border); }
 .bot-avatar { width: 42px; height: 42px; border-radius: 13px; background: linear-gradient(135deg, #4c6791, #82c3bf); color: white; display: grid; place-items: center; }
 .chat-widget-header h2 { margin: 0; color: var(--ink); font-size: 14px; }
@@ -97,7 +117,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .eyebrow { display: block; color: var(--navy); font-size: 10px; font-weight: 700; letter-spacing: .09em; }
 .chat-intro h3 { margin: 6px 0 5px; color: var(--ink); font: 600 clamp(22px, 2.5vw, 31px)/1.2 Georgia, serif; }
 .chat-intro p { margin: 0 auto; color: var(--muted); max-width: 570px; font-size: 12px; }
-.prompt-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 24px; max-width: 900px; }
+.prompt-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px auto 24px; max-width: 900px; }
+.suggestion-label { flex-basis: 100%; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-align: center; text-transform: uppercase; }
 .prompt-pills button { padding: 8px 12px; border: .5px solid var(--border); border-radius: 18px; background: var(--card); color: var(--text); cursor: pointer; }
 .prompt-pills button:hover { border-color: var(--navy); color: var(--navy); transform: translateY(-1px); }
 .message { display: flex; gap: 10px; align-items: flex-start; max-width: 960px; margin: 0 auto 17px; }
@@ -149,6 +170,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .trivia { max-width: 620px; margin: 7px 4px 0; color: var(--muted); font-size: 10px; }
 .trivia strong { color: var(--navy); }
 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+@keyframes welcomeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes chatReveal { from { opacity: 0; transform: translateY(16px) scale(.988); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .composer { margin: 0 clamp(18px, 4vw, 58px); min-height: 58px; border: .5px solid var(--border); background: var(--card); border-radius: 13px; padding: 8px 9px 8px 14px; display: flex; align-items: flex-end; gap: 8px; box-shadow: 0 7px 24px rgba(15,23,42,.07); }
 .composer:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(76,103,145,.12); }
 .composer textarea { flex: 1; min-height: 38px; max-height: 116px; resize: none; border: 0; outline: 0; background: transparent; color: var(--ink); padding: 9px 0; }
@@ -226,6 +249,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media (max-width: 700px) {
   .chat-stage { padding: 8px; }
+  .chat-stage.is-welcome { padding: 0 12px; }
+  .welcome-state { min-height: 100%; padding: 28px 0 calc(28px + env(safe-area-inset-bottom)); }
+  .welcome-logo-panel { width: min(88vw, 390px); padding: 12px 14px; border-radius: 14px; }
+  .welcome-heading { margin-top: 24px; font-size: clamp(29px, 9vw, 40px); }
+  .welcome-heading span + span { margin-top: 6px; }
+  .welcome-prompts { margin: 22px 0 14px; gap: 7px; }
+  .welcome-prompts button { width: 100%; min-height: 40px; padding-inline: 12px; }
+  .welcome-composer { min-height: 132px; border-radius: 14px; padding: 12px 11px 10px 14px; }
+  .welcome-composer textarea { min-height: 74px; font-size: 16px; }
+  .welcome-composer-footer span { max-width: 210px; }
   .chat-widget { border-radius: 13px; min-height: 480px; }
   .message-list { padding: 16px 12px; }
   .composer { margin-inline: 11px; }

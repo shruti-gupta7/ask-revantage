@@ -7,7 +7,7 @@ import { MailIcon, SearchIcon } from "@/components/icons";
 
 const people = [
   { name: "Shruti Gupta", role: "Senior Accountant, Corporate Tax", department: "Corporate Tax", location: "Bangalore", expertise: ["Tax", "Workpapers"], email: "shruti.gupta@example.com", image: "/assets/shruti-gupta-avatar.jpg" },
-  { name: "Ethan Brooks", role: "People Operations Partner", department: "People & Culture", location: "Chicago", expertise: ["Leave", "Benefits"], email: "ethan.brooks@example.com", image: "/assets/ethan-brooks-avatar.png" },
+  { name: "Ethan Brooks", role: "People Operations Partner", department: "People & Culture", location: "Chicago", expertise: ["Leave", "Benefits"], email: "ethan.brooks@example.com", image: "/assets/people/ethan-brooks-avatar.jpg" },
   { name: "Maya Patel", role: "Workplace Experience Lead", department: "Workplace", location: "Bangalore", expertise: ["Cab policy", "Office access"], email: "maya.patel@example.com", image: "/assets/people/maya-patel-avatar.jpg" },
   { name: "Oliver Chen", role: "Technology Support Manager", department: "Technology", location: "New York", expertise: ["Devices", "Access"], email: "oliver.chen@example.com", image: "/assets/people/oliver-chen-avatar.jpg" },
   { name: "Sofia Ramirez", role: "Travel Programme Manager", department: "Operations", location: "Chicago", expertise: ["Travel", "Expenses"], email: "sofia.ramirez@example.com", image: "/assets/people/sofia-ramirez-avatar.jpg" },

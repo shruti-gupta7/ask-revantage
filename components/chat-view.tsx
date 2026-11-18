@@ -14,10 +14,25 @@ const MESSAGE_KEY = "ask-revantage-chat-v4";
 const SESSION_KEY = "ask-revantage-directline-v5";
 const LEGACY_SESSION_KEYS = ["ask-revantage-directline-v4", "ask-revantage-directline-v3", "ask-revantage-directline-v2"];
 const USER_KEY = "ask-revantage-user-v1";
-const prompts = [
+const generalPrompts = [
   "What is the late-night cab policy?",
   "Summarise the employee leave policy.",
   "Which documents explain travel reimbursements?",
+];
+const cabPrompts = [
+  "How late can I cancel my cab?",
+  "What should I do if my cab does not arrive?",
+  "Which safety checks should I complete before boarding?",
+];
+const leavePrompts = [
+  "How much casual leave do employees receive?",
+  "Can unused leave be carried forward?",
+  "Who approves a leave request?",
+];
+const travelPrompts = [
+  "Which travel expenses are reimbursable?",
+  "When are receipts required?",
+  "Who approves an expense exception?",
 ];
 const trivia = [
   "Policy answers can include links to the documents used as sources.",
@@ -86,6 +101,15 @@ function SourceActions({ sources }: { sources: NonNullable<ChatMessage["sources"
   </div>;
 }
 
+function nextQuestionPrompts(messages: ChatMessage[]) {
+  const latestAnswer = [...messages].reverse().find((message) => message.role === "assistant" && message.id !== "welcome");
+  const searchable = `${latestAnswer?.text || ""} ${(latestAnswer?.sources || []).map((source) => source.name).join(" ")}`.toLowerCase();
+  if (/\b(cab|transport|pickup|driver)\b/.test(searchable)) return cabPrompts;
+  if (/\b(leave|time off|holiday|vacation)\b/.test(searchable)) return leavePrompts;
+  if (/\b(travel|expense|reimburse|receipt)\b/.test(searchable)) return travelPrompts;
+  return generalPrompts;
+}
+
 export function ChatView() {
   const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
   const [input, setInput] = useState("");
@@ -124,7 +148,8 @@ export function ChatView() {
     return () => clearInterval(timer);
   }, [waiting]);
 
-  const availablePrompts = useMemo(() => messages.length <= 1 ? prompts : [], [messages.length]);
+  const availablePrompts = useMemo(() => nextQuestionPrompts(messages), [messages]);
+  const hasStarted = messages.some((message) => message.role === "user");
 
   async function startSession() {
     const session = await createDirectLineSession(browserUserId());
@@ -198,22 +223,36 @@ export function ChatView() {
 
   function onSubmit(event: FormEvent) { event.preventDefault(); void submitQuestion(input); }
 
-  return <section className="chat-stage" aria-label="Ask Revantage chat">
-    <div className="chat-widget">
+  return <section className={`chat-stage ${hasStarted ? "has-conversation" : "is-welcome"}`} aria-label="Ask Revantage chat">
+    {!hasStarted ? <div className="welcome-state">
+      <div className="welcome-content">
+        <div className="welcome-logo-panel">
+          <Image
+            className="welcome-logo"
+            src="/assets/ask-revantage-wordmark-full.png"
+            alt="Ask Revantage. One Question. One Place. One Answer."
+            width={900}
+            height={237}
+            priority
+          />
+        </div>
+        <h1 className="welcome-heading"><span>Hey Shruti!</span><span>How can I help you today?</span></h1>
+        <div className="welcome-prompts" aria-label="Suggested questions">
+          {generalPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void submitQuestion(prompt)}>{prompt}</button>)}
+        </div>
+        <form className="welcome-composer" onSubmit={onSubmit}>
+          <label className="sr-only" htmlFor="welcome-question">Ask a question</label>
+          <textarea id="welcome-question" value={input} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setInput(event.target.value)} onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submitQuestion(input); } }} placeholder="Ask about a Revantage policy or process..." rows={3}/>
+          <div className="welcome-composer-footer"><span>Press Enter to send · Shift + Enter for a new line</span><button className="welcome-send-button" disabled={!input.trim()} aria-label="Send question"><SendIcon size={20}/></button></div>
+        </form>
+      </div>
+    </div> : <div className="chat-widget chat-reveal">
       <div className="chat-widget-header">
         <div className="bot-avatar"><BotIcon size={22}/></div>
         <div className="chat-widget-title"><h2>Ask Revantage Bot</h2><p><span className="status-dot"/>Connected to Copilot Studio</p></div>
         <button className="conversation-reset" type="button" onClick={resetConversation} disabled={waiting} title="Clear this chat and start a new Direct Line conversation"><RefreshIcon size={15}/>New conversation</button>
       </div>
       <div className="message-list" ref={scrollRef} aria-live="polite">
-        <div className="chat-intro">
-          <span className="eyebrow">REVANTAGE KNOWLEDGE</span>
-          <h3>How can I help today?</h3>
-          <p>Ask about a policy or process. Supporting documents appear with the answer when Copilot provides them.</p>
-        </div>
-        {availablePrompts.length > 0 && <div className="prompt-pills" aria-label="Suggested prompts">
-          {availablePrompts.map((prompt) => <button key={prompt} onClick={() => void submitQuestion(prompt)}>{prompt}</button>)}
-        </div>}
         {messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
           {message.role === "assistant" ? <div className="message-avatar bot"><BotIcon size={17}/></div> : <Image className="message-avatar" src="/assets/shruti-gupta-avatar.jpg" alt="Shruti Gupta" width={34} height={34}/>} 
           <div className="message-content"><div className="message-name">{message.role === "assistant" ? "Ask Revantage Bot" : "Shruti Gupta"}</div><div className="message-bubble">{message.role === "assistant" ? <MarkdownMessage>{message.text}</MarkdownMessage> : message.text}</div>{message.sources && <SourceActions sources={message.sources}/>}</div>
@@ -222,6 +261,10 @@ export function ChatView() {
           <div className="message-avatar bot"><BotIcon size={17}/></div>
           <div className="message-content"><div className="message-name">Ask Revantage Bot</div><div className="message-bubble loading-bubble"><span/><span/><span/><b>Working on your answer</b></div><p className="trivia"><strong>Did you know?</strong> {trivia[triviaIndex]}</p></div>
         </article>}
+        {!waiting && <div className="prompt-pills" aria-label="Suggested next questions">
+          <span className="suggestion-label">Suggested next questions</span>
+          {availablePrompts.map((prompt) => <button key={prompt} onClick={() => void submitQuestion(prompt)}>{prompt}</button>)}
+        </div>}
       </div>
       <form className="composer" onSubmit={onSubmit}>
         <label className="sr-only" htmlFor="question">Ask a question</label>
@@ -229,6 +272,6 @@ export function ChatView() {
         <button className="send-button" disabled={!input.trim() || waiting} aria-label="Send question"><SendIcon size={19}/></button>
       </form>
       <div className="chat-footer">Answers use available knowledge sources. Verify important decisions against the source document.</div>
-    </div>
+    </div>}
   </section>;
 }

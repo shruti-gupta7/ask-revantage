@@ -18,6 +18,10 @@ const required = [
   "public/assets/people/noah-williams-avatar.jpg",
   "public/assets/people/ava-thompson-avatar.jpg",
   "public/assets/people/liam-foster-avatar.jpg",
+  "public/assets/people/ethan-brooks-avatar.jpg",
+  "public/knowledge/Revantage_Cab_and_Office_Transport_Policy.pdf",
+  "public/knowledge/Revantage_Leave_and_Time_Off_Policy.pdf",
+  "public/knowledge/Revantage_Travel_and_Expense_Policy.pdf",
 ];
 await Promise.all(required.map((path) => access(path)));
 
@@ -30,6 +34,7 @@ const obsolete = [
   "lib/direct-line-classifier.js",
   "lib/direct-line-classifier.d.ts",
   "lib/store.ts",
+  "public/assets/ethan-brooks-avatar.png",
 ];
 await Promise.all(obsolete.map(async (path) => {
   try {
@@ -60,6 +65,10 @@ const all = [chat, people, admin];
 const legacyBotName = ["Ask", "Revant", "Bot"].join(" ");
 if (all.some((text) => text.includes(legacyBotName))) throw new Error("Legacy bot name remains");
 if (!chat.includes("Ask Revantage Bot")) throw new Error("Correct bot name is missing");
+if (!chat.includes("Suggested next questions") || chat.includes("messages.length <= 1")) throw new Error("Persistent suggested questions are incomplete");
+if (!chat.includes("Hey Shruti!") || !chat.includes("How can I help you today?") || !chat.includes("welcome-logo")) throw new Error("Centered first-screen welcome state is incomplete");
+if (!chat.includes("hasStarted") || !chat.includes("chat-reveal")) throw new Error("First-prompt chat reveal is incomplete");
+if (!people.includes("/assets/people/ethan-brooks-avatar.jpg")) throw new Error("Ethan Brooks photo avatar is missing");
 if (!people.includes("mailto:")) throw new Error("People Directory email actions are missing");
 if (!tokenRoute.includes("/tokens/generate") || !tokenRoute.includes("/conversations")) throw new Error("Direct Line generate/start lifecycle is incomplete");
 if (!directline.includes("/tokens/refresh") || !directline.includes("ResourceNotFound")) throw new Error("Direct Line refresh/recovery logic is incomplete");
@@ -73,5 +82,6 @@ if (!["entities", "attachments", "channelData", "@id", "sameAs"].every((value) =
 if (!chat.includes("source-main-link") || !chat.includes("noopener noreferrer") || !chat.includes("Open</a>")) throw new Error("Clickable chat source cards are incomplete");
 if (!knowledge.includes("document-main-link") || !knowledge.includes("without a document URL") || !knowledge.includes("Open</a>")) throw new Error("Knowledge Library source availability handling is incomplete");
 if (!sourceLinks.includes("new URL") || !sourceLinks.includes("downloadUrl")) throw new Error("Source URL validation is incomplete");
+if (!["Revantage_Cab_and_Office_Transport_Policy.pdf", "Revantage_Leave_and_Time_Off_Policy.pdf", "Revantage_Travel_and_Expense_Policy.pdf", "localKnowledgeUrl"].every((value) => sourceLinks.includes(value))) throw new Error("Bundled knowledge citation mapping is incomplete");
 if (!shell.includes("ask-revantage-wordmark-full.png")) throw new Error("Complete navbar logo is not configured");
 console.log("Static verification passed.");

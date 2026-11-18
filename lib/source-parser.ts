@@ -1,4 +1,4 @@
-import { usableSourceUrl } from "@/lib/source-links";
+import { localKnowledgeUrl, usableSourceUrl } from "@/lib/source-links";
 import type { SourceDocument } from "@/lib/types";
 
 const URL_KEYS = ["url", "uri", "contentUrl", "sourceUrl", "webUrl", "documentUrl", "openUrl", "downloadUrl", "link", "href", "@id", "sameAs"];
@@ -58,7 +58,7 @@ function walk(value: unknown, output: Candidate[], context: Context = {}, seen =
   };
 
   const rawUrl = URL_KEYS.map((key) => record[key]).find((candidate) => usableSourceUrl(candidate));
-  const url = usableSourceUrl(rawUrl);
+  const url = usableSourceUrl(rawUrl) || localKnowledgeUrl(localName);
   const downloadUrl = usableSourceUrl(record.downloadUrl) || (/download/i.test(localName || "") ? url : undefined);
   if (url) {
     const name = usefulName(localName) || usefulName(context.name) || localName?.trim() || fileNameFromUrl(url) || "Source document";
@@ -92,7 +92,10 @@ function fromText(text: string) {
 
   const textWithoutUrls = text.replace(/https?:\/\/[^\s)]+/gi, "");
   const pdfNames = textWithoutUrls.match(/(?:[A-Za-z0-9][A-Za-z0-9 _.,&'()\-]*\.pdf)\b/gi) || [];
-  pdfNames.forEach((name) => output.push({ name: name.trim(), fileType: "PDF" }));
+  pdfNames.forEach((name) => {
+    const trimmed = name.trim();
+    output.push({ name: trimmed, url: localKnowledgeUrl(trimmed), fileType: "PDF" });
+  });
   return output;
 }
 
