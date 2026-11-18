@@ -4,8 +4,10 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 import { BotIcon, DownloadIcon, OpenIcon, RefreshIcon, SendIcon } from "@/components/icons";
+import { MarkdownMessage } from "@/components/markdown-message";
 import { askCopilot, createDirectLineSession, isRecoverableDirectLineError } from "@/lib/directline";
-import { storeSources } from "@/lib/source-storage";
+import { isPdfSource, sourceDownloadUrl, sourceViewUrl } from "@/lib/source-links";
+import { fileIconFor, storeSources } from "@/lib/source-storage";
 import type { ChatMessage, DirectLineSession } from "@/lib/types";
 
 const MESSAGE_KEY = "ask-revantage-chat-v4";
@@ -67,13 +69,20 @@ function SourceActions({ sources }: { sources: NonNullable<ChatMessage["sources"
   if (!sources.length) return null;
   return <div className="message-sources" aria-label="Supporting documents">
     <span className="source-heading">Sources used</span>
-    {sources.map((source) => <div className="source-row" key={source.id}>
-      <div><strong>{source.name}</strong>{source.location && <span>{source.location}</span>}</div>
+    {sources.map((source) => {
+      const viewUrl = sourceViewUrl(source);
+      const downloadUrl = sourceDownloadUrl(source);
+      const pdf = isPdfSource(source);
+      const details = <><img className="source-file-icon" src={fileIconFor(source)} alt="" width="38" height="38"/><div className="source-copy"><strong>{source.name}</strong><span>{viewUrl ? (source.location || source.fileType || (pdf ? "PDF document" : "Supporting document")) : "Unavailable: no document URL was returned"}</span></div></>;
+      return <div className={`source-row ${pdf ? "is-pdf" : ""}`} key={source.id}>
+        {viewUrl ? <a className="source-main-link" href={viewUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${source.name} in a new tab`}>{details}</a> : <div className="source-main-link is-disabled">{details}</div>}
+        {pdf && <span className="pdf-badge">PDF</span>}
       <div className="source-actions">
-        {source.url && <a href={source.url} target="_blank" rel="noreferrer"><OpenIcon size={14}/>Open</a>}
-        {(source.downloadUrl || source.url) && <a href={source.downloadUrl || source.url} target="_blank" rel="noreferrer" download><DownloadIcon size={14}/>Download</a>}
+          {viewUrl && <a href={viewUrl} target="_blank" rel="noopener noreferrer"><OpenIcon size={14}/>Open</a>}
+          {downloadUrl && <a href={downloadUrl} target="_blank" rel="noopener noreferrer" download><DownloadIcon size={14}/>Download</a>}
       </div>
-    </div>)}
+      </div>;
+    })}
   </div>;
 }
 
@@ -207,7 +216,7 @@ export function ChatView() {
         </div>}
         {messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
           {message.role === "assistant" ? <div className="message-avatar bot"><BotIcon size={17}/></div> : <Image className="message-avatar" src="/assets/shruti-gupta-avatar.jpg" alt="Shruti Gupta" width={34} height={34}/>} 
-          <div className="message-content"><div className="message-name">{message.role === "assistant" ? "Ask Revantage Bot" : "Shruti Gupta"}</div><div className="message-bubble">{message.text}</div>{message.sources && <SourceActions sources={message.sources}/>}</div>
+          <div className="message-content"><div className="message-name">{message.role === "assistant" ? "Ask Revantage Bot" : "Shruti Gupta"}</div><div className="message-bubble">{message.role === "assistant" ? <MarkdownMessage>{message.text}</MarkdownMessage> : message.text}</div>{message.sources && <SourceActions sources={message.sources}/>}</div>
         </article>)}
         {waiting && <article className="message assistant waiting-message">
           <div className="message-avatar bot"><BotIcon size={17}/></div>

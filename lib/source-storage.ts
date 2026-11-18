@@ -15,9 +15,29 @@ export function readStoredSources(): SourceDocument[] {
 export function storeSources(sources: SourceDocument[]) {
   if (typeof window === "undefined" || !sources.length) return;
   const current = readStoredSources();
-  const merged = [...sources, ...current].filter((source, index, all) =>
-    index === all.findIndex((candidate) => candidate.url === source.url && candidate.name === source.name),
-  ).slice(0, 100);
+  const merged: SourceDocument[] = [];
+  for (const source of [...sources, ...current]) {
+    const name = source.name.trim().toLowerCase();
+    const existingIndex = merged.findIndex((candidate) =>
+      (source.url && candidate.url === source.url) || candidate.name.trim().toLowerCase() === name,
+    );
+    if (existingIndex < 0) {
+      merged.push(source);
+      continue;
+    }
+    const existing = merged[existingIndex];
+    merged[existingIndex] = {
+      ...source,
+      ...existing,
+      id: existing.url ? `${existing.name}-${existing.url}` : source.id,
+      url: existing.url || source.url,
+      downloadUrl: existing.downloadUrl || source.downloadUrl,
+      fileType: existing.fileType || source.fileType,
+      location: existing.location || source.location,
+      lastSeenAt: existing.lastSeenAt || source.lastSeenAt,
+    };
+  }
+  merged.splice(100);
   localStorage.setItem(SOURCE_STORAGE_KEY, JSON.stringify(merged));
   window.dispatchEvent(new CustomEvent("ask-revantage:sources", { detail: merged }));
 }

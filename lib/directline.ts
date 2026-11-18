@@ -1,4 +1,5 @@
 import type { DirectLineSession, SourceDocument } from "@/lib/types";
+import { extractSourcesFromActivity, mergeSourceDocuments } from "@/lib/source-parser";
 
 type Activity = {
   id?: string;
@@ -140,43 +141,6 @@ function textFromActivity(activity: Activity) {
   return "";
 }
 
-function walk(value: unknown, results: SourceDocument[], seen = new WeakSet<object>()) {
-  if (!value || typeof value !== "object" || seen.has(value)) return;
-  seen.add(value);
-  if (Array.isArray(value)) {
-    value.forEach((item) => walk(item, results, seen));
-    return;
-  }
-  const record = value as Record<string, unknown>;
-  const url = [record.url, record.uri, record.contentUrl, record.sourceUrl, record.downloadUrl, record.link].find(
-    (candidate) => typeof candidate === "string" && /^https?:\/\//i.test(candidate),
-  ) as string | undefined;
-  const name = [record.name, record.title, record.filename, record.fileName, record.displayName].find(
-    (candidate) => typeof candidate === "string" && candidate.trim(),
-  ) as string | undefined;
-  if (url || name) {
-    const finalName = name || (() => { try { return new URL(url!).pathname.split("/").pop() || "Source document"; } catch { return "Source document"; } })();
-    results.push({
-      id: `${finalName}-${url || "metadata"}`,
-      name: finalName,
-      url,
-      downloadUrl: typeof record.downloadUrl === "string" ? record.downloadUrl : undefined,
-      fileType: typeof record.fileType === "string" ? record.fileType : undefined,
-      location: typeof record.location === "string" ? record.location : undefined,
-      lastSeenAt: new Date().toISOString(),
-    });
-  }
-  Object.values(record).forEach((item) => walk(item, results, seen));
-}
-
-function sourcesFromActivity(activity: Activity) {
-  const found: SourceDocument[] = [];
-  walk(activity.entities, found);
-  walk(activity.attachments, found);
-  walk(activity.channelData, found);
-  return found.filter((source, index, all) => index === all.findIndex((item) => item.url === source.url && item.name === source.name));
-}
-
 export async function askCopilot(
   session: DirectLineSession,
   text: string,
@@ -212,10 +176,8 @@ export async function askCopilot(
       if (activity.id === userActivityId || activity.from?.id === session.userId || activity.type !== "message") continue;
       const timestamp = activity.timestamp ? Date.parse(activity.timestamp) : Date.now();
       if (Number.isFinite(timestamp) && timestamp < sentAt - 1500) continue;
-      sources = [...sources, ...sourcesFromActivity(activity)].filter((source, index, all) =>
-        index === all.findIndex((item) => item.url === source.url && item.name === source.name),
-      );
       const value = textFromActivity(activity);
+      sources = mergeSourceDocuments([...sources, ...extractSourcesFromActivity({ ...activity, text: value || activity.text })]);
       if (!value || INTERMEDIATE.test(value) || value.length < 24) continue;
       candidate = value;
       candidateAt = Date.now();

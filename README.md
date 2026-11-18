@@ -11,10 +11,14 @@ Ask Revantage is a responsive internal knowledge-assistant demonstration built w
 - Three suggested prompts inside the chat window only.
 - Visible loader and policy trivia that rotates every four seconds while the answer is prepared.
 - Direct Line token generation followed by explicit conversation start, user/token/conversation pairing, proactive token refresh, watermark polling, stale-session recovery, and a three-minute final-answer window.
-- Knowledge Library populated from source metadata returned in the current browser.
+- Secure GitHub-Flavored Markdown rendering for Copilot responses, including headings, emphasis, lists, tables, paragraphs, code, blockquotes, and safe links. Raw HTML is skipped and unsafe URL schemes are rejected.
+- Citation parsing across Direct Line activity entities, attachments, channel data, markdown links, and nested schema.org citation/appearance records. Copilot-returned HTTP(S) document URLs are preserved rather than reconstructed from filenames.
+- Clickable source-document cards with explicit **Open** actions. PDF sources use a recognizable PDF icon and open the actual returned PDF/document URL in a new tab. Download is shown only for an explicit download URL or a direct file URL.
+- Knowledge Library populated from the same source names and real URLs returned in the current browser. Filename-only citations remain visible but are clearly unavailable and never receive fabricated Open or Download actions.
 - Admin Dashboard with recognizable local SVG assets and responsive connector-specific setup forms for Copilot Studio, SharePoint, OneDrive, Word, Excel, PowerPoint, PDF/file upload, and Website.
 - People Directory email actions use `mailto:` and never open Teams.
-- Local JPG/PNG profile assets, including Shruti Gupta and Ethan Brooks.
+- Distinct local JPG/PNG profile assets for every People Directory profile.
+- Complete Ask Revantage wordmark in the responsive navigation without desktop or mobile cropping.
 - Light and dark themes, responsive navigation, reduced-motion support, keyboard focus states, Open Graph metadata, favicon, and link-preview image.
 - Canonical route-group structure with cleanup for obsolete duplicate routes and superseded legacy modules.
 - Patched Next.js 16.4.5 and a minimal PostCSS configuration for the authored CSS, with no unused Tailwind plugin dependency.
@@ -113,6 +117,7 @@ Production work should add enterprise authentication, delegated authorization, t
 | --- | --- |
 | Next.js | App Router, metadata, server-side token route, Vercel deployment |
 | React | Stateful chat, theme, navigation and responsive views |
+| react-markdown + remark-gfm | Safe rendering for Copilot Markdown, including tables and lists |
 | Microsoft Copilot Studio | Agent orchestration and grounded knowledge responses |
 | Direct Line | Short-lived browser conversation token and activities |
 | Local SVG/PNG/JPG assets | Product logos, Open Graph image, favicon and avatars |
@@ -129,7 +134,8 @@ Production work should add enterprise authentication, delegated authorization, t
 - Invalid legacy, expired, incomplete, unauthorized, or missing persisted sessions are cleared as a unit and restarted once; a new token is never attached to an old conversation ID.
 - `DIRECT_LINE_TRUSTED_ORIGINS` can restrict token creation to named origins.
 - Token responses are marked `no-store`.
-- Source links are rendered only when Copilot provides HTTP or HTTPS metadata.
+- Source links are rendered only when Copilot provides valid HTTP or HTTPS metadata. The same returned URL is used by the chat card and Knowledge Library; filenames are never converted into guessed links.
+- Markdown HTML is skipped, external images are not loaded, and links are restricted to HTTP, HTTPS, `mailto:`, or same-page anchors as appropriate.
 - Admin source selections and non-sensitive form fields are a clearly labelled browser-only hackathon simulation unless a real API is connected. Connector forms never request secrets; production credentials belong in approved server-side services.
 
 ## Verification

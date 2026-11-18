@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "is-open" : ""}`}>
       <div className="sidebar-brand">
         <Link href="/" className="brand-mark" aria-label="Ask Revantage home">
-          <span className="brand-r">R</span><Image className="brand-logo" src="/assets/ask-revantage-wordmark.png" alt="Ask Revantage" width={600} height={134} priority/>
+          <span className="brand-r">R</span><Image className="brand-logo" src="/assets/ask-revantage-wordmark-full.png" alt="Ask Revantage" width={900} height={237} priority/>
         </Link>
         <button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><CloseIcon size={18}/></button>
       </div>
